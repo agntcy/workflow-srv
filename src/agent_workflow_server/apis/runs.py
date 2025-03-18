@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import (
     APIRouter,
     Body,
+    Depends,
     HTTPException,
     Path,
     Query,
@@ -14,6 +15,7 @@ from fastapi import (
 from pydantic import Field, StrictStr
 from typing_extensions import Annotated
 
+from agent_workflow_server.depends.model_validator import validate_run_create
 from agent_workflow_server.generated.models.run import Run
 from agent_workflow_server.generated.models.run_create import RunCreate
 from agent_workflow_server.generated.models.run_output import (
@@ -39,6 +41,7 @@ router = APIRouter()
     tags=["Runs"],
     summary="Create Background Run",
     response_model_by_alias=True,
+    dependencies=[Depends(validate_run_create)],
 )
 async def create_run(
     run_create: RunCreate = Body(None, description=""),
