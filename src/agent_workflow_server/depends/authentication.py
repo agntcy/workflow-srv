@@ -14,10 +14,7 @@ API_KEY_NAME = "x-api-key"
 
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
-
-async def auth_middleware(
-    api_key_header: str = Security(api_key_header),
-) -> Optional[str]:
+async def authentication_with_api_key(api_key_header: str = Security(api_key_header)) -> Optional[str]:
     # If no API key is configured, authentication is disabled
     if not API_KEY:
         return None
