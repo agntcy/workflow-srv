@@ -25,7 +25,9 @@ from agent_workflow_server.generated.models.run_output import (
 )
 from agent_workflow_server.generated.models.run_output_stream import RunOutputStream
 from agent_workflow_server.generated.models.run_search_request import RunSearchRequest
-from agent_workflow_server.services.runs import Runs
+
+from agent_workflow_server.services.runs import Runs, UnprocessableContentException
+from agent_workflow_server.validation.validation import AgentNotFoundException, InvalidFormatException
 
 router = APIRouter()
 
@@ -122,6 +124,12 @@ async def get_run_output(
         run, run_output = await Runs.wait_for_output(run_id, block_timeout)
     except TimeoutError:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except AgentNotFoundException as e:
+        return Response(status_code=status.HTTP_404_NOT_FOUND, content=str(e))
+    except UnprocessableContentException as e:
+        return Response(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=str(e))
+    except InvalidFormatException as e:
+        return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=str(e))
     if run is None:
         return Response(status_code=status.HTTP_404_NOT_FOUND)
     if run.status == "success" and run_output is not None:
