@@ -7,6 +7,7 @@ from agent_workflow_server.agents.load import load_agents
 from agent_workflow_server.services.queue import start_workers
 from agent_workflow_server.services.runs import ApiRunCreate, Runs
 from tests.mock import (
+    MOCK_AGENT_ID,
     MOCK_AGENTS_REF_ENV,
     MOCK_MANIFEST_ENV,
     MOCK_RUN_INPUT,
@@ -14,9 +15,7 @@ from tests.mock import (
     MockAdapter,
 )
 
-run_create_mock = ApiRunCreate(
-    agent_id="3f1e2549-5799-4321-91ae-2a4881d55526", input=MOCK_RUN_INPUT, config={}
-)
+run_create_mock = ApiRunCreate(agent_id=MOCK_AGENT_ID, input=MOCK_RUN_INPUT, config={})
 
 
 @pytest.mark.asyncio
