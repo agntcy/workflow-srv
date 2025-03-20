@@ -14,7 +14,9 @@ from tests.mock import (
     MockAdapter,
 )
 
-run_create_mock = ApiRunCreate(agent_id="mock_agent", input=MOCK_RUN_INPUT, config={})
+run_create_mock = ApiRunCreate(
+    agent_id="3f1e2549-5799-4321-91ae-2a4881d55526", input=MOCK_RUN_INPUT, config={}
+)
 
 
 @pytest.mark.asyncio

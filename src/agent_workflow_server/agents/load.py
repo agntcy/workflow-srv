@@ -141,7 +141,7 @@ Example: {"agent1": "agent1_module:agent1_var", "agent2": "agent2_module:agent2_
             raise Exception(e)
 
 
-def get_agent_info(agent_id: str = "") -> AgentInfo:
+def get_agent_info(agent_id: str) -> AgentInfo:
     if agent_id not in AGENTS:
         raise ValueError(f'Agent "{agent_id}" not found')
 

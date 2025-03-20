@@ -22,11 +22,12 @@ def test_load_agents(mocker: MockerFixture):
     load_agents()
 
     assert len(AGENTS) == 1
-    assert isinstance(AGENTS["mock_agent"].agent, MockAgent)
+    assert isinstance(AGENTS["3f1e2549-5799-4321-91ae-2a4881d55526"].agent, MockAgent)
 
 
 @pytest.mark.parametrize(
-    "agent_id, expected", [("mock_agent", True), ("another_id", False)]
+    "agent_id, expected",
+    [("3f1e2549-5799-4321-91ae-2a4881d55526", True), ("another_id", False)],
 )
 def test_get_agent_info(mocker: MockerFixture, agent_id: str, expected: bool):
     mocker.patch.dict("os.environ", MOCK_AGENTS_REF_ENV)
@@ -45,7 +46,8 @@ def test_get_agent_info(mocker: MockerFixture, agent_id: str, expected: bool):
 
 
 @pytest.mark.parametrize(
-    "agent_id, expected", [("mock_agent", True), ("another_id", False)]
+    "agent_id, expected",
+    [("3f1e2549-5799-4321-91ae-2a4881d55526", True), ("another_id", False)],
 )
 def test_get_agent(mocker: MockerFixture, agent_id: str, expected: bool):
     mocker.patch.dict("os.environ", MOCK_AGENTS_REF_ENV)
