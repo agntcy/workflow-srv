@@ -15,7 +15,6 @@ from fastapi import (
 from pydantic import Field, StrictStr
 from typing_extensions import Annotated
 
-from agent_workflow_server.depends.model_validator import validate_run_create
 from agent_workflow_server.generated.models.run import Run
 from agent_workflow_server.generated.models.run_create import RunCreate
 from agent_workflow_server.generated.models.run_output import (
@@ -26,7 +25,10 @@ from agent_workflow_server.generated.models.run_output import (
 from agent_workflow_server.generated.models.run_output_stream import RunOutputStream
 from agent_workflow_server.generated.models.run_search_request import RunSearchRequest
 from agent_workflow_server.services.runs import Runs
-from agent_workflow_server.validation.validation import InvalidFormatException
+from agent_workflow_server.services.validation import (
+    InvalidFormatException,
+    validate_run_create,
+)
 
 router = APIRouter()
 

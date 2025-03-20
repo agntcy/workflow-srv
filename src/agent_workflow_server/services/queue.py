@@ -1,15 +1,14 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 
+from agent_workflow_server.services.validation import (
+    InvalidFormatException,
+    validate_output,
+)
 from agent_workflow_server.storage.models import RunInfo
 from agent_workflow_server.storage.storage import DB
-from agent_workflow_server.validation.validation import (
-    InvalidFormatException,
-    get_agent_schemas,
-    validate_against_schema,
-)
 
 from .message import Message
 from .runs import RUNS_QUEUE, Runs
@@ -156,14 +155,3 @@ async def worker(worker_id: int):
 
         finally:
             RUNS_QUEUE.task_done()
-
-
-def validate_output(run_id, agent_id: str, output: Any) -> None:
-    if output:
-        schemas = get_agent_schemas(agent_id)
-
-        validate_against_schema(
-            instance=output,
-            schema=schemas["output"]["properties"],
-            error_prefix=f"Output validation failed for run {run_id}",
-        )
