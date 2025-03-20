@@ -125,7 +125,9 @@ async def get_run_output(
     except TimeoutError:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except InvalidFormatException as e:
-        return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=str(e))
+        return Response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=str(e)
+        )
     if run is None:
         return Response(status_code=status.HTTP_404_NOT_FOUND)
     if run.status == "success" and run_output is not None:

@@ -10,7 +10,11 @@ from agent_workflow_server.storage.models import RunInfo
 
 from agent_workflow_server.storage.storage import DB
 
-from agent_workflow_server.validation.validation import InvalidFormatException, get_agent_schemas, validate_against_schema
+from agent_workflow_server.validation.validation import (
+    InvalidFormatException,
+    get_agent_schemas,
+    validate_against_schema,
+)
 
 
 from .message import Message
@@ -104,9 +108,9 @@ async def worker(worker_id: int):
             run_info["queue_s"] = started_at - run["created_at"].timestamp()
 
             DB.update_run_info(run_id, run_info)
-            
+
             try:
-                validate_output(run_id, run['agent_id'], last_message.data)
+                validate_output(run_id, run["agent_id"], last_message.data)
 
                 DB.add_run_output(run_id, last_message.data)
                 await Runs.Stream.publish(run_id, Message(topic="control", data="done"))
@@ -114,9 +118,11 @@ async def worker(worker_id: int):
                 log_run(worker_id, run_id, "succeeded", **run_stats(run_info))
 
             except InvalidFormatException as error:
-                await Runs.Stream.publish(run_id, Message(topic="error", data=str(error)))
+                await Runs.Stream.publish(
+                    run_id, Message(topic="error", data=str(error))
+                )
                 log_run(worker_id, run_id, "failed")
-                raise RunError(str(error))                
+                raise RunError(str(error))
 
         except AttemptsExceededError:
             ended_at = datetime.now().timestamp()
@@ -157,12 +163,13 @@ async def worker(worker_id: int):
         finally:
             RUNS_QUEUE.task_done()
 
+
 def validate_output(run_id, agent_id: str, output: Any) -> None:
     if output:
         schemas = get_agent_schemas(agent_id)
-            
+
         validate_against_schema(
-            instance=output, 
-            schema=schemas['output']['properties'],
-            error_prefix=f"Output validation failed for run {run_id}"
+            instance=output,
+            schema=schemas["output"]["properties"],
+            error_prefix=f"Output validation failed for run {run_id}",
         )
