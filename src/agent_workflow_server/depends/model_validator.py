@@ -1,17 +1,15 @@
 import logging
-from fastapi import Depends, HTTPException, Request
-import jsonschema
 
-from agent_workflow_server.agents.load import AGENTS
+from fastapi import HTTPException, Request
+
+from agent_workflow_server.generated.models.run_create import RunCreate
 from agent_workflow_server.validation.validation import (
     InvalidFormatException,
     get_agent_schemas,
     validate_against_schema,
 )
-from ..generated.models.run_create import RunCreate
 
 logger = logging.getLogger(__name__)
-
 
 async def validate_run_create(request: Request, run_create: RunCreate) -> RunCreate:
     """Validate RunCreate input against agent's descriptor schema"""
