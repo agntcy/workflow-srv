@@ -11,7 +11,7 @@ from fastapi import (  # noqa: F401
 from pydantic import Field, StrictStr
 from typing_extensions import Annotated
 
-from agent_workflow_server.agents.load import get_agent_info
+from agent_workflow_server.agents.load import get_agent, get_agent_info
 from agent_workflow_server.generated.models.agent import Agent
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,
@@ -41,9 +41,11 @@ async def get_acp_descriptor_by_id(
 ) -> AgentACPDescriptor:
     """Get agent ACP descriptor by agent ID."""
 
-    agent = get_agent_info()
-
-    return agent.manifest
+    try:
+        agent_info = get_agent_info(agent_id)
+        return agent_info.manifest
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get(
@@ -63,7 +65,12 @@ async def get_agent_by_id(
     ),
 ) -> Agent:
     """Get an agent by ID."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+
+    try:
+        agent = get_agent(agent_id)
+        return agent
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.post(
@@ -80,4 +87,9 @@ async def search_agents(
     agent_search_request: AgentSearchRequest = Body(None, description=""),
 ) -> List[Agent]:
     """Returns a list of agents matching the criteria provided in the request.  This endpoint also functions as the endpoint to list all agents."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+
+    try:
+        agents = search_agents(agent_search_request)
+        return agents
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))

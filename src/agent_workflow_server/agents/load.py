@@ -6,8 +6,12 @@ import pkgutil
 from typing import Dict, List, NamedTuple
 
 import agent_workflow_server.agents.adapters
+from agent_workflow_server.generated.models.agent import Agent
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,
+)
+from agent_workflow_server.generated.models.agent_search_request import (
+    AgentSearchRequest,
 )
 
 from .base import BaseAdapter, BaseAgent
@@ -137,9 +141,40 @@ Example: {"agent1": "agent1_module:agent1_var", "agent2": "agent2_module:agent2_
             raise Exception(e)
 
 
-# TODO: This supports only one agent for now
 def get_agent_info(agent_id: str = "") -> AgentInfo:
-    # if agent_id not in AGENTS:
-    #     raise ValueError(f'Agent "{agent_id}" not found')
+    if agent_id not in AGENTS:
+        raise ValueError(f'Agent "{agent_id}" not found')
 
-    return next(iter(AGENTS.values()))  # return first agent
+    return AGENTS[agent_id]
+
+
+def get_agent(agent_id: str) -> Agent:
+    if agent_id not in AGENTS:
+        raise ValueError(f'Agent "{agent_id}" not found')
+
+    return Agent(agent_id=agent_id, metadata=AGENTS[agent_id].manifest.metadata)
+
+
+def get_agent_from_agent_info(agent_id: str, agent_info: AgentInfo) -> Agent:
+    if agent_id not in AGENTS:
+        raise ValueError(f'Agent "{agent_id}" not found')
+
+    return Agent(agent_id=agent_id, metadata=agent_info.manifest.metadata)
+
+
+def search_agents(search_request: AgentSearchRequest) -> List[Agent]:
+    if not search_request.name and not search_request.version:
+        raise ValueError("At least one of 'name' or 'version' must be provided")
+
+    return [
+        Agent(agent_id=agent_id, metadata=agent.manifest.metadata)
+        for agent_id, agent in AGENTS.items()
+        if (
+            not search_request.name
+            or search_request.name == agent.manifest.metadata.ref.name
+        )
+        and (
+            not search_request.version
+            or search_request.version == agent.manifest.metadata.ref.version
+        )
+    ]
