@@ -40,7 +40,7 @@ def validate_output(run_id, agent_id: str, output: Any) -> None:
 
         validate_against_schema(
             instance=output,
-            schema=schemas["output"]["properties"],
+            schema=schemas["output"].get("properties", schemas["output"]),
             error_prefix=f"Output validation failed for run {run_id}",
         )
 
