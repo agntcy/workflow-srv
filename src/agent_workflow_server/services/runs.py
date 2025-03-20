@@ -20,7 +20,6 @@ from agent_workflow_server.agents.load import AGENTS
 
 from agent_workflow_server.storage.models import Run, RunInfo, RunStatus
 from agent_workflow_server.storage.storage import DB
-from agent_workflow_server.validation.validation import UnprocessableContentException, get_agent_schemas, validate_against_schema
 
 from .message import Message
 
@@ -174,7 +173,6 @@ class Runs:
 
         if run["status"] != "pending":
             # If the run is already completed, return the stored output immediately
-
             return _to_api_model(run), DB.get_run_output(run_id)
 
         # TODO: handle removing cvs when run is completed and there are no more subscribers
@@ -222,15 +220,3 @@ class Runs:
                     yield message
                 except TimeoutError as error:
                     logger.error(f"Timeout waiting for run {run_id}: {error}")
-
-def validate_output(run_id, agent_id: str, output: Any) -> None:
-    if output:
-        schemas = get_agent_schemas(agent_id)
-        if not schemas['output']:
-            raise UnprocessableContentException(f"Agent does not define output schema")
-            
-        validate_against_schema(
-            instance=output, 
-            schema=schemas['output']['properties'],
-            error_prefix=f"Output validation failed for run {run_id}"
-        )
