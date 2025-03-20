@@ -2,7 +2,6 @@ import logging
 from typing import Any
 
 import jsonschema
-from fastapi import HTTPException, Request, status
 
 from agent_workflow_server.agents.load import AGENTS
 from agent_workflow_server.generated.models.run_create import RunCreate
@@ -46,18 +45,13 @@ def validate_output(run_id, agent_id: str, output: Any) -> None:
         )
 
 
-async def validate_run_create(request: Request, run_create: RunCreate) -> RunCreate:
+def validate_run_create(run_create: RunCreate) -> RunCreate:
     """Validate RunCreate input against agent's descriptor schema"""
-    try:
-        schemas = get_agent_schemas(run_create.agent_id)
+    schemas = get_agent_schemas(run_create.agent_id)
+    if run_create.input:
+        validate_against_schema(run_create.input, schemas["input"])
 
-        if run_create.input:
-            validate_against_schema(run_create.input, schemas["input"])
+    if run_create.config:
+        validate_against_schema(run_create.config, schemas["config"])
 
-        if run_create.config:
-            validate_against_schema(run_create.config, schemas["config"])
-
-        return run_create
-
-    except InvalidFormatException as e:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    return run_create
