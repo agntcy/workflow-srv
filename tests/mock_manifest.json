@@ -16,7 +16,12 @@
             }
         },
         "output": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
         },
         "config": {
             "type": "object",
