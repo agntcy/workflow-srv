@@ -11,12 +11,12 @@ from fastapi import Depends, FastAPI
 
 from agent_workflow_server.agents.load import load_agents
 from agent_workflow_server.apis.agents import router as AgentsApiRouter
-from agent_workflow_server.apis.runs import router as RunsApiRouter
-from agent_workflow_server.logger.custom_logger import CustomLoggerHandler
-from agent_workflow_server.services.authentication import (
+from agent_workflow_server.apis.authentication import (
     authentication_with_api_key,
     setup_api_key_auth,
 )
+from agent_workflow_server.apis.runs import router as RunsApiRouter
+from agent_workflow_server.logger.custom_logger import CustomLoggerHandler
 from agent_workflow_server.services.queue import start_workers
 
 load_dotenv()
