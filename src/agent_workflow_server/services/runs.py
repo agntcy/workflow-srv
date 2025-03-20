@@ -40,7 +40,7 @@ def _make_run(run_create: ApiRunCreate) -> Run:
 
     return {
         "run_id": str(uuid4()),
-        "agent_id": run_create.agent_id if run_create.agent_id else str(uuid4()),
+        "agent_id": run_create.agent_id,
         "thread_id": str(uuid4()),  # TODO
         "input": run_create.input if run_create.input else {},
         "config": run_create.config if run_create.config else {},
