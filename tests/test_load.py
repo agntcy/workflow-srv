@@ -13,16 +13,12 @@ from agent_workflow_server.generated.models.agent_search_request import (
 )
 from tests.mock import (
     MOCK_AGENT_ID,
-    MOCK_AGENTS_REF_ENV,
-    MOCK_MANIFEST_ENV,
     MockAdapter,
     MockAgent,
 )
 
 
 def test_load_agents(mocker: MockerFixture):
-    mocker.patch.dict("os.environ", MOCK_AGENTS_REF_ENV)
-    mocker.patch.dict("os.environ", MOCK_MANIFEST_ENV)
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
     load_agents()
@@ -36,8 +32,6 @@ def test_load_agents(mocker: MockerFixture):
     [(MOCK_AGENT_ID, True), ("another_id", False)],
 )
 def test_get_agent_info(mocker: MockerFixture, agent_id: str, expected: bool):
-    mocker.patch.dict("os.environ", MOCK_AGENTS_REF_ENV)
-    mocker.patch.dict("os.environ", MOCK_MANIFEST_ENV)
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
     load_agents()
@@ -56,8 +50,6 @@ def test_get_agent_info(mocker: MockerFixture, agent_id: str, expected: bool):
     [(MOCK_AGENT_ID, True), ("another_id", False)],
 )
 def test_get_agent(mocker: MockerFixture, agent_id: str, expected: bool):
-    mocker.patch.dict("os.environ", MOCK_AGENTS_REF_ENV)
-    mocker.patch.dict("os.environ", MOCK_MANIFEST_ENV)
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
     load_agents()
@@ -90,8 +82,6 @@ def test_get_agent(mocker: MockerFixture, agent_id: str, expected: bool):
 def test_search_agents(
     mocker: MockerFixture, name: str, version: str, expected: int, exception: bool
 ):
-    mocker.patch.dict("os.environ", MOCK_AGENTS_REF_ENV)
-    mocker.patch.dict("os.environ", MOCK_MANIFEST_ENV)
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
     load_agents()
