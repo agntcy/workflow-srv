@@ -3,6 +3,7 @@
 
 # coding: utf-8
 
+from itertools import islice
 from typing import Any, Dict, List, Optional
 
 from fastapi import (
@@ -258,7 +259,9 @@ async def search_stateless_runs(
 ) -> List[RunStateless]:
     """Search for stateless run.  This endpoint also functions as the endpoint to list all stateless Runs."""
     runs = Runs.search(run_search_request)
-    return runs
+    return list(
+        islice(islice(runs, run_search_request.offset, None), run_search_request.limit)
+    )
 
 
 @router.get(
