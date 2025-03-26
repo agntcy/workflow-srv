@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 # Variables
 SPEC_FILE := acp-spec/openapi.json
 OUTPUT_DIR := src/agent_workflow_server/generated

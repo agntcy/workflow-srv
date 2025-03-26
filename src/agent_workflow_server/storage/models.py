@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 

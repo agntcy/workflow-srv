@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 from typing import AsyncGenerator
 
 from agent_workflow_server.agents.load import get_agent_info
