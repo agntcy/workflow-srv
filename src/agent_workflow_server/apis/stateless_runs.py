@@ -257,7 +257,8 @@ async def search_stateless_runs(
     run_search_request: RunSearchRequest = Body(None, description=""),
 ) -> List[RunStateless]:
     """Search for stateless run.  This endpoint also functions as the endpoint to list all stateless Runs."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    runs = Runs.search(run_search_request)
+    return runs
 
 
 @router.get(
