@@ -11,6 +11,9 @@ from uuid import uuid4
 from agent_workflow_server.generated.models.run_create_stateless import (
     RunCreateStateless as ApiRunCreate,
 )
+from agent_workflow_server.generated.models.run_search_request import (
+    RunSearchRequest,
+)
 from agent_workflow_server.generated.models.run_stateless import (
     RunStateless as ApiRun,
 )
@@ -19,6 +22,7 @@ from agent_workflow_server.storage.storage import DB
 
 from ..utils.tools import is_valid_uuid
 from .message import Message
+from .thread import get_thread
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +141,45 @@ class Runs:
     def delete(run_id: str):
         if not DB.delete_run(run_id):
             raise Exception("Run not found")
+
+    @staticmethod
+    def get_all() -> List[ApiRun]:
+        db_runs = DB.list_runs()
+        return [_to_api_model(run) for run in db_runs]
+
+    @staticmethod
+    def search(search_request: RunSearchRequest) -> List[ApiRun]:
+        if (
+            not search_request.agent_id
+            and not search_request.status
+            and (not search_request.metadata or len(search_request.metadata) == 0)
+        ):
+            raise ValueError("At least one search criteria must be provided")
+
+        db_runs = DB.list_runs()
+
+        runs = [
+            _to_api_model(run)
+            for run in db_runs
+            if (
+                not search_request.agent_id
+                or search_request.agent_id == run["agent_id"]
+            )
+            and (not search_request.status or search_request.status == run["status"])
+        ]
+
+        if search_request.metadata and len(search_request.metadata) > 0:
+            for run in enumerate(runs):
+                thread = get_thread(run["thread_id"])
+                if thread:
+                    for key, value in search_request.metadata.items():
+                        if (
+                            thread["metadata"].get(key) is not None
+                            and thread["metadata"].get(key) != value
+                        ):
+                            runs.pop(run)
+
+        return runs
 
     @staticmethod
     async def set_status(run_id: str, status: RunStatus):
