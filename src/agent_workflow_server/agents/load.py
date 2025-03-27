@@ -188,3 +188,9 @@ def search_agents(search_request: AgentSearchRequest) -> List[Agent]:
             or search_request.version == agent.manifest.metadata.ref.version
         )
     ]
+
+def get_agent_openapi_schema(agent_id: str) -> str:
+    if agent_id not in AGENTS:
+        raise ValueError(f'Agent "{agent_id}" not found')
+
+    return json.dumps(AGENTS[agent_id].schema, indent=2)
