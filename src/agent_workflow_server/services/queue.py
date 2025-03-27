@@ -108,7 +108,7 @@ async def worker(worker_id: int):
 
             try:
                 validate_output(run_id, run["agent_id"], last_message.data)
-
+                logger.info("Run outout:\n%s", last_message.data)
                 DB.add_run_output(run_id, last_message.data)
                 await Runs.Stream.publish(run_id, Message(topic="control", data="done"))
                 await Runs.set_status(run_id, "success")
