@@ -11,9 +11,6 @@ from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,
 )
 
-ACP_SPEC_PATH = os.getenv("ACP_SPEC_PATH", "acp-spec/openapi.json")
-
-
 class ACPDescriptorValidationException(Exception):
     pass
 
@@ -90,7 +87,7 @@ def _gen_oas_callback(descriptor: AgentACPDescriptor, spec_dict):
 
 
 def generate_agent_oapi(descriptor: AgentACPDescriptor):
-    spec_dict, base_uri = read_from_filename(ACP_SPEC_PATH)
+    spec_dict, base_uri = read_from_filename(os.getenv("ACP_SPEC_PATH", "acp-spec/openapi.json"))
 
     # If no exception is raised by validate(), the spec is valid.
     validate(spec_dict)

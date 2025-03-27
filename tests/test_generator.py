@@ -19,24 +19,6 @@ from agent_workflow_server.generated.models.agent_ref import AgentRef
 
 
 @pytest.fixture
-def mock_spec():
-    """Load the OpenAPI spec for testing, falling back to test spec if main spec not found"""
-    # Try the main spec first
-    spec_path = Path(__file__).parent.parent / "acp-spec" / "openapi.json"
-    
-    # If main spec doesn't exist, try the test spec
-    # The GH CI does not clone submodules, so the main spec won't be available
-    if not spec_path.exists():
-        spec_path = Path(__file__).parent / "test_openapi.json"
-        
-    if not spec_path.exists():
-        raise FileNotFoundError("Neither main OpenAPI spec nor test spec could be found")
-        
-    with open(spec_path) as f:
-        return json.load(f)
-
-
-@pytest.fixture
 def basic_descriptor():
     """Create a basic descriptor for testing"""
     return AgentACPDescriptor(
@@ -58,7 +40,7 @@ def basic_descriptor():
     )
 
 
-def test_generate_basic_spec(mock_spec, basic_descriptor):
+def test_generate_basic_spec(basic_descriptor):
     """Test generating a basic spec with minimal capabilities"""
     result = generate_agent_oapi(basic_descriptor)
 
