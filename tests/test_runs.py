@@ -2,13 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+from datetime import datetime
+from uuid import uuid4
 
 import pytest
 from pytest_mock import MockerFixture
 
 from agent_workflow_server.agents.load import load_agents
+from agent_workflow_server.generated.models.run_search_request import (
+    RunSearchRequest,
+)
 from agent_workflow_server.services.queue import start_workers
 from agent_workflow_server.services.runs import ApiRun, ApiRunCreate, Runs
+from agent_workflow_server.storage.storage import DB
 from tests.mock import (
     MOCK_AGENT_ID,
     MOCK_RUN_INPUT,
@@ -93,3 +99,109 @@ async def test_wait_invalid_run(mocker: MockerFixture, timeout: float | None):
         assert output is None
     except Exception:
         assert False
+
+
+def init_test_search_runs(
+    agent_id: str, nb_pending: int, nb_success: int, nb_error: int
+):
+    status = ["pending"] * nb_pending + ["success"] * nb_success + ["error"] * nb_error
+    for i in range(nb_pending + nb_success + nb_error):
+        run = {
+            "run_id": str(uuid4()),
+            "agent_id": agent_id,
+            "thread_id": str(uuid4()),  # TODO
+            "input": {},
+            "config": None,
+            "metadata": None,
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
+            "status": status[i],
+        }
+        DB.create_run(run)
+
+
+TEST_SEARCH_RUNS_AGENT_ID_1 = MOCK_AGENT_ID
+TEST_SEARCH_RUNS_AGENT_ID_2 = "2f1e2549-5799-4321-91ae-2a4881d55526"
+TEST_SEARCH_RUNS_AGENT_ID_3 = "26aee4b6-1749-4877-bcd9-a580fa3974b9"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "agent_id, status, expected, offset, limit, exception",
+    [
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "success", 2, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "pending", 5, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "error", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "timeout", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "interrupted", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "success", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "pending", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "error", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "timeout", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "interrupted", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_3, "success", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_3, "pending", 0, None, None, False),
+        (None, "success", 3, None, None, False),
+        (None, "pending", 6, None, None, False),
+        (None, "error", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, None, 8, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, None, 2, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_3, None, 0, None, None, False),
+        (None, None, 10, None, None, False),
+        (None, None, 4, 0, 4, False),
+        (None, None, 4, 4, 4, False),
+        (None, None, 2, 8, 4, False),
+    ],
+)
+async def test_search_runs(
+    mocker: MockerFixture,
+    agent_id: str | None,
+    status: str | None,
+    expected: int,
+    offset: int | None,
+    limit: int | None,
+    exception: bool,
+):
+    mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
+
+    try:
+        load_agents()
+
+        # delete all previous runs to avoid count issues for this test
+        for run in Runs.get_all():
+            Runs.delete(run.run_id)
+
+        # Create test runs DB
+        init_test_search_runs(
+            TEST_SEARCH_RUNS_AGENT_ID_1,
+            nb_pending=5,
+            nb_success=2,
+            nb_error=1,
+        )
+        init_test_search_runs(
+            TEST_SEARCH_RUNS_AGENT_ID_2,
+            nb_pending=1,
+            nb_success=1,
+            nb_error=0,
+        )
+
+        try:
+            runs = Runs.search(
+                RunSearchRequest(
+                    agent_id=agent_id, status=status, offset=offset, limit=limit
+                )
+            )
+
+            assert not exception
+            assert len(runs) == expected
+
+        except ValueError:
+            assert exception
+        except Exception as e:
+            print(f"Unexpected exception: {e}")
+            assert False
+
+    finally:
+        # delete all previous runs to avoid count issues for other tests
+        for run in Runs.get_all():
+            Runs.delete(run.run_id)

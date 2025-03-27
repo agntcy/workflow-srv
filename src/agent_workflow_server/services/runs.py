@@ -5,11 +5,15 @@ import asyncio
 import logging
 from collections import defaultdict
 from datetime import datetime
+from itertools import islice
 from typing import AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
 from agent_workflow_server.generated.models.run_create_stateless import (
     RunCreateStateless as ApiRunCreate,
+)
+from agent_workflow_server.generated.models.run_search_request import (
+    RunSearchRequest,
 )
 from agent_workflow_server.generated.models.run_stateless import (
     RunStateless as ApiRun,
@@ -19,6 +23,7 @@ from agent_workflow_server.storage.storage import DB
 
 from ..utils.tools import is_valid_uuid
 from .message import Message
+from .thread import get_thread
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +142,35 @@ class Runs:
     def delete(run_id: str):
         if not DB.delete_run(run_id):
             raise Exception("Run not found")
+
+    @staticmethod
+    def get_all() -> List[ApiRun]:
+        db_runs = DB.list_runs()
+        return [_to_api_model(run) for run in db_runs]
+
+    @staticmethod
+    def search(search_request: RunSearchRequest) -> List[ApiRun]:
+        filters = {}
+        if search_request.agent_id:
+            filters["agent_id"] = search_request.agent_id
+        if search_request.status:
+            filters["status"] = search_request.status
+        runs = DB.search_run(filters)
+
+        if search_request.metadata and len(search_request.metadata) > 0:
+            for run in enumerate(runs):
+                thread = get_thread(run["thread_id"])
+                if thread:
+                    for key, value in search_request.metadata.items():
+                        if (
+                            thread["metadata"].get(key) is not None
+                            and thread["metadata"].get(key) != value
+                        ):
+                            runs.pop(run)
+
+        return list(
+            islice(islice(runs, search_request.offset, None), search_request.limit)
+        )
 
     @staticmethod
     async def set_status(run_id: str, status: RunStatus):
