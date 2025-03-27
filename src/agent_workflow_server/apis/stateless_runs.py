@@ -56,6 +56,7 @@ async def _validate_run_create(
             detail=str(e),
         )
 
+
 async def _wait_and_return_run_output(run_id: str) -> RunWaitResponseStateless:
     try:
         run, run_output = await Runs.wait_for_output(run_id)
@@ -70,7 +71,9 @@ async def _wait_and_return_run_output(run_id: str) -> RunWaitResponseStateless:
     if run.status == "success" and run_output is not None:
         return RunWaitResponseStateless(
             run=run,
-            output=RunOutput(RunResult(type="result", values=serialize_to_dict(run_output))),
+            output=RunOutput(
+                RunResult(type="result", values=serialize_to_dict(run_output))
+            ),
         )
     else:
         return RunWaitResponseStateless(

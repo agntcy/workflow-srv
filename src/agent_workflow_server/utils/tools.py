@@ -13,6 +13,7 @@ def is_valid_uuid(val):
     except ValueError:
         return False
 
+
 def serialize_to_dict(v):
     if isinstance(v, list):
         return [serialize_to_dict(vv) for vv in v]
