@@ -112,7 +112,7 @@ async def search_agents(
         404: {"model": str, "description": "Not Found"},
     },
     tags=["Agents"],
-    summary="Get Agent specifc OpenAPI",
+    summary="Get agent-specific OpenAPI",
     response_model_by_alias=True,
 )
 async def get_agent_openapi(
