@@ -120,32 +120,37 @@ def init_test_search_runs(
         DB.create_run(run)
 
 
+TEST_SEARCH_RUNS_AGENT_ID_1 = MOCK_AGENT_ID
 TEST_SEARCH_RUNS_AGENT_ID_2 = "2f1e2549-5799-4321-91ae-2a4881d55526"
+TEST_SEARCH_RUNS_AGENT_ID_3 = "26aee4b6-1749-4877-bcd9-a580fa3974b9"
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "agent_id, status, expected, exception",
+    "agent_id, status, expected, offset, limit, exception",
     [
-        (MOCK_AGENT_ID, "success", 2, False),
-        (MOCK_AGENT_ID, "pending", 5, False),
-        (MOCK_AGENT_ID, "error", 1, False),
-        (MOCK_AGENT_ID, "timeout", 0, False),
-        (MOCK_AGENT_ID, "interrupted", 0, False),
-        (TEST_SEARCH_RUNS_AGENT_ID_2, "success", 1, False),
-        (TEST_SEARCH_RUNS_AGENT_ID_2, "pending", 1, False),
-        (TEST_SEARCH_RUNS_AGENT_ID_2, "error", 0, False),
-        (TEST_SEARCH_RUNS_AGENT_ID_2, "timeout", 0, False),
-        (TEST_SEARCH_RUNS_AGENT_ID_2, "interrupted", 0, False),
-        ("unk-agent-id", "success", 0, False),
-        ("unk-agent-id", "pending", 0, False),
-        (None, "success", 3, False),
-        (None, "pending", 6, False),
-        (None, "error", 1, False),
-        (MOCK_AGENT_ID, None, 8, False),
-        (TEST_SEARCH_RUNS_AGENT_ID_2, None, 2, False),
-        ("unk-agent-id", None, 0, False),
-        (None, None, 10, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "success", 2, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "pending", 5, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "error", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "timeout", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, "interrupted", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "success", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "pending", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "error", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "timeout", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "interrupted", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_3, "success", 0, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_3, "pending", 0, None, None, False),
+        (None, "success", 3, None, None, False),
+        (None, "pending", 6, None, None, False),
+        (None, "error", 1, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_1, None, 8, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, None, 2, None, None, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_3, None, 0, None, None, False),
+        (None, None, 10, None, None, False),
+        (None, None, 4, 0, 4, False),
+        (None, None, 4, 4, 4, False),
+        (None, None, 2, 8, 4, False),
     ],
 )
 async def test_search_runs(
@@ -153,6 +158,8 @@ async def test_search_runs(
     agent_id: str | None,
     status: str | None,
     expected: int,
+    offset: int | None,
+    limit: int | None,
     exception: bool,
 ):
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
@@ -166,7 +173,7 @@ async def test_search_runs(
 
         # Create test runs DB
         init_test_search_runs(
-            MOCK_AGENT_ID,
+            TEST_SEARCH_RUNS_AGENT_ID_1,
             nb_pending=5,
             nb_success=2,
             nb_error=1,
@@ -179,7 +186,11 @@ async def test_search_runs(
         )
 
         try:
-            runs = Runs.search(RunSearchRequest(agent_id=agent_id, status=status))
+            runs = Runs.search(
+                RunSearchRequest(
+                    agent_id=agent_id, status=status, offset=offset, limit=limit
+                )
+            )
 
             assert not exception
             assert len(runs) == expected

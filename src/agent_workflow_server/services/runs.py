@@ -150,17 +150,12 @@ class Runs:
 
     @staticmethod
     def search(search_request: RunSearchRequest) -> List[ApiRun]:
-        db_runs = DB.list_runs()
-
-        runs = [
-            _to_api_model(run)
-            for run in db_runs
-            if (
-                not search_request.agent_id
-                or search_request.agent_id == run["agent_id"]
-            )
-            and (not search_request.status or search_request.status == run["status"])
-        ]
+        filters = {}
+        if search_request.agent_id:
+            filters["agent_id"] = search_request.agent_id
+        if search_request.status:
+            filters["status"] = search_request.status
+        runs = DB.search_run(filters)
 
         if search_request.metadata and len(search_request.metadata) > 0:
             for run in enumerate(runs):
