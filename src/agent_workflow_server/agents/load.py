@@ -9,7 +9,7 @@ import pkgutil
 from typing import Any, Dict, Hashable, List, Mapping, NamedTuple
 
 import agent_workflow_server.agents.adapters
-from agent_workflow_server.agents.generator import generate_agent_oapi
+from agent_workflow_server.agents.oas_generator import generate_agent_oapi
 from agent_workflow_server.generated.models.agent import Agent
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,

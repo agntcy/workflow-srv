@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_workflow_server.agents.generator import (
+from agent_workflow_server.agents.oas_generator import (
     generate_agent_oapi,
 )
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
