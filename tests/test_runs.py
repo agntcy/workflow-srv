@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+from datetime import datetime
+from uuid import uuid4
 
 import pytest
 from pytest_mock import MockerFixture
@@ -12,6 +14,7 @@ from agent_workflow_server.generated.models.run_search_request import (
 )
 from agent_workflow_server.services.queue import start_workers
 from agent_workflow_server.services.runs import ApiRun, ApiRunCreate, Runs
+from agent_workflow_server.storage.storage import DB
 from tests.mock import (
     MOCK_AGENT_ID,
     MOCK_RUN_INPUT,
@@ -98,28 +101,56 @@ async def test_wait_invalid_run(mocker: MockerFixture, timeout: float | None):
         assert False
 
 
+def init_test_search_runs(
+    agent_id: str, nb_pending: int, nb_success: int, nb_error: int
+):
+    status = ["pending"] * nb_pending + ["success"] * nb_success + ["error"] * nb_error
+    for i in range(nb_pending + nb_success + nb_error):
+        run = {
+            "run_id": str(uuid4()),
+            "agent_id": agent_id,
+            "thread_id": str(uuid4()),  # TODO
+            "input": {},
+            "config": None,
+            "metadata": None,
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
+            "status": status[i],
+        }
+        DB.create_run(run)
+
+
+TEST_SEARCH_RUNS_AGENT_ID_2 = "2f1e2549-5799-4321-91ae-2a4881d55526"
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "valid_agent_id, status, expected, exception",
+    "agent_id, status, expected, exception",
     [
-        (True, "success", 0, False),
-        (True, "pending", 1, False),
-        (True, "error", 0, False),
-        (True, "timeout", 0, False),
-        (True, "interrupted", 0, False),
-        (False, "success", 0, False),
-        (False, "pending", 0, False),
-        (None, "success", 0, False),
-        (None, "pending", 1, False),
-        (None, "error", 0, False),
-        (True, None, 1, False),
-        (False, None, 0, False),
-        (None, None, 1, False),
+        (MOCK_AGENT_ID, "success", 2, False),
+        (MOCK_AGENT_ID, "pending", 5, False),
+        (MOCK_AGENT_ID, "error", 1, False),
+        (MOCK_AGENT_ID, "timeout", 0, False),
+        (MOCK_AGENT_ID, "interrupted", 0, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "success", 1, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "pending", 1, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "error", 0, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "timeout", 0, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, "interrupted", 0, False),
+        ("unk-agent-id", "success", 0, False),
+        ("unk-agent-id", "pending", 0, False),
+        (None, "success", 3, False),
+        (None, "pending", 6, False),
+        (None, "error", 1, False),
+        (MOCK_AGENT_ID, None, 8, False),
+        (TEST_SEARCH_RUNS_AGENT_ID_2, None, 2, False),
+        ("unk-agent-id", None, 0, False),
+        (None, None, 10, False),
     ],
 )
 async def test_search_runs(
     mocker: MockerFixture,
-    valid_agent_id: bool | None,
+    agent_id: str | None,
     status: str | None,
     expected: int,
     exception: bool,
@@ -129,24 +160,25 @@ async def test_search_runs(
     try:
         load_agents()
 
-        loop = asyncio.get_event_loop()
-        worker_task = loop.create_task(start_workers(1))
-
-        # delete all previous runs to avoid count issues
-        runs = Runs.get_all()
-        for run in runs:
+        # delete all previous runs to avoid count issues for this test
+        for run in Runs.get_all():
             Runs.delete(run.run_id)
 
-        # Create the run
-        new_run = await Runs.put(run_create=run_create_mock)
+        # Create test runs DB
+        init_test_search_runs(
+            MOCK_AGENT_ID,
+            nb_pending=5,
+            nb_success=2,
+            nb_error=1,
+        )
+        init_test_search_runs(
+            TEST_SEARCH_RUNS_AGENT_ID_2,
+            nb_pending=1,
+            nb_success=1,
+            nb_error=0,
+        )
 
         try:
-            agent_id = None
-            if valid_agent_id is not None:
-                agent_id = (
-                    new_run.agent_id if valid_agent_id else "non-existent-agent-id"
-                )
-
             runs = Runs.search(RunSearchRequest(agent_id=agent_id, status=status))
 
             assert not exception
@@ -159,8 +191,6 @@ async def test_search_runs(
             assert False
 
     finally:
-        worker_task.cancel()
-        try:
-            await worker_task
-        except asyncio.CancelledError:
-            pass
+        # delete all previous runs to avoid count issues for other tests
+        for run in Runs.get_all():
+            Runs.delete(run.run_id)
