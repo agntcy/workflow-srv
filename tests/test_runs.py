@@ -114,7 +114,7 @@ async def test_wait_invalid_run(mocker: MockerFixture, timeout: float | None):
         (None, "error", 0, False),
         (True, None, 1, False),
         (False, None, 0, False),
-        (None, None, 0, True),
+        (None, None, 1, False),
     ],
 )
 async def test_search_runs(

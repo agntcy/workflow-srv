@@ -5,6 +5,7 @@ import asyncio
 import logging
 from collections import defaultdict
 from datetime import datetime
+from itertools import islice
 from typing import AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
@@ -149,13 +150,6 @@ class Runs:
 
     @staticmethod
     def search(search_request: RunSearchRequest) -> List[ApiRun]:
-        if (
-            not search_request.agent_id
-            and not search_request.status
-            and (not search_request.metadata or len(search_request.metadata) == 0)
-        ):
-            raise ValueError("At least one search criteria must be provided")
-
         db_runs = DB.list_runs()
 
         runs = [
@@ -179,7 +173,9 @@ class Runs:
                         ):
                             runs.pop(run)
 
-        return runs
+        return list(
+            islice(islice(runs, search_request.offset, None), search_request.limit)
+        )
 
     @staticmethod
     async def set_status(run_id: str, status: RunStatus):
