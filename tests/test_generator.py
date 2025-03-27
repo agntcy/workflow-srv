@@ -20,8 +20,18 @@ from agent_workflow_server.generated.models.agent_ref import AgentRef
 
 @pytest.fixture
 def mock_spec():
-    """Load the actual OpenAPI spec for testing"""
+    """Load the OpenAPI spec for testing, falling back to test spec if main spec not found"""
+    # Try the main spec first
     spec_path = Path(__file__).parent.parent / "acp-spec" / "openapi.json"
+    
+    # If main spec doesn't exist, try the test spec
+    # The GH CI does not clone submodules, so the main spec won't be available
+    if not spec_path.exists():
+        spec_path = Path(__file__).parent / "test_openapi.json"
+        
+    if not spec_path.exists():
+        raise FileNotFoundError("Neither main OpenAPI spec nor test spec could be found")
+        
     with open(spec_path) as f:
         return json.load(f)
 
