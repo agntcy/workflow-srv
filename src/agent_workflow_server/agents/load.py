@@ -189,6 +189,7 @@ def search_agents(search_request: AgentSearchRequest) -> List[Agent]:
         )
     ]
 
+
 def get_agent_openapi_schema(agent_id: str) -> str:
     if agent_id not in AGENTS:
         raise ValueError(f'Agent "{agent_id}" not found')
