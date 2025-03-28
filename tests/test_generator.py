@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import uuid
+
 import pytest
 
 from agent_workflow_server.agents.oas_generator import (
@@ -40,7 +42,7 @@ def basic_descriptor():
 
 def test_generate_basic_spec(basic_descriptor):
     """Test generating a basic spec with minimal capabilities"""
-    result = generate_agent_oapi(basic_descriptor)
+    result = generate_agent_oapi(basic_descriptor, str(uuid.uuid4()))
 
     # Verify basic structure
     assert "openapi" in result
