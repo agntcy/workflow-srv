@@ -122,7 +122,7 @@ Check that the module name and export symbol in 'AGENTS_REF' env variable are co
         raise ImportError("Failed to load agent manifest")
 
     try:
-        schema = generate_agent_oapi(manifest)
+        schema = generate_agent_oapi(manifest, name)
     except Exception as e:
         raise ImportError("Failed to generate OAPI schema:", e)
 

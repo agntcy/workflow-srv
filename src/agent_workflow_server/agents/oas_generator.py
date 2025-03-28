@@ -7,6 +7,7 @@ import os
 from openapi_spec_validator import validate
 from openapi_spec_validator.readers import read_from_filename
 
+from agent_workflow_server.apis.authentication import add_authentication_to_spec
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,
 )
@@ -87,7 +88,20 @@ def _gen_oas_callback(descriptor: AgentACPDescriptor, spec_dict):
         del spec_dict["components"]["schemas"]["RunCreate"]["properties"]["webhook"]
 
 
-def generate_agent_oapi(descriptor: AgentACPDescriptor):
+def _add_default_agent_id(spec_dict, agent_id: str):
+    """Add default values to common parameters in the OpenAPI spec"""
+    for path_item in spec_dict["paths"].values():
+        for operation in path_item.values():
+            if isinstance(operation, dict) and "parameters" in operation:
+                for param in operation["parameters"]:
+                    # Add default value for agent_id parameter
+                    if param.get("name") == "agent_id":
+                        param["schema"] = param.get("schema", {})
+                        param["schema"]["default"] = agent_id
+    return spec_dict
+
+
+def generate_agent_oapi(descriptor: AgentACPDescriptor, agent_id: str):
     spec_dict, base_uri = read_from_filename(
         os.getenv("ACP_SPEC_PATH", "acp-spec/openapi.json")
     )
@@ -113,6 +127,12 @@ def generate_agent_oapi(descriptor: AgentACPDescriptor):
     _gen_oas_interrupts(descriptor, spec_dict)
     _gen_oas_streaming(descriptor, spec_dict)
     _gen_oas_callback(descriptor, spec_dict)
+
+    # Add default values to common parameters
+    spec_dict = _add_default_agent_id(spec_dict, agent_id)
+
+    # Add authentication
+    spec_dict = add_authentication_to_spec(spec_dict)
 
     validate(spec_dict)
 
