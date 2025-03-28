@@ -13,6 +13,7 @@ from fastapi import (  # noqa: F401
     Request,
     Response,
 )
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse
 from pydantic import Field, StrictStr
 from typing_extensions import Annotated
@@ -131,7 +132,6 @@ async def get_agent_openapi(
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-
 @public_router.get(
     "/agents/{agent_id}/docs",
     responses={
@@ -142,9 +142,7 @@ async def get_agent_openapi(
         404: {"model": str, "description": "Not Found"},
     },
     tags=["Agents"],
-    summary="Get Agent specifc Swagger UI",
-    response_model_by_alias=True,
-    dependencies=[],
+    summary="Get Agent specific Swagger UI",
 )
 async def get_agent_docs(
     request: Request,
@@ -154,30 +152,7 @@ async def get_agent_docs(
     ),
 ) -> HTMLResponse:
     """Get the Swagger UI documentation for an agent by ID."""
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Agent OpenAPI Documentation</title>
-        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
-        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-    </head>
-    <body>
-        <div id="swagger-ui"></div>
-        <script>
-            window.onload = function() {{
-                SwaggerUIBundle({{
-                    url: "{request.url_for("get_agent_openapi", agent_id=agent_id)}",
-                    dom_id: '#swagger-ui',
-                    deepLinking: true,
-                    presets: [
-                        SwaggerUIBundle.presets.apis,
-                        SwaggerUIBundle.SwaggerUIStandalonePreset
-                    ],
-                }})
-            }}
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html)
+    return get_swagger_ui_html(
+        openapi_url=request.url_for("get_agent_openapi", agent_id=agent_id),
+        title="Agent API Documentation",
+    )
