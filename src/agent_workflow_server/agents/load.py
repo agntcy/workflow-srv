@@ -6,9 +6,10 @@ import json
 import logging
 import os
 import pkgutil
-from typing import Dict, List, NamedTuple
+from typing import Any, Dict, Hashable, List, Mapping, NamedTuple
 
 import agent_workflow_server.agents.adapters
+from agent_workflow_server.agents.oas_generator import generate_agent_oapi
 from agent_workflow_server.generated.models.agent import Agent
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 class AgentInfo(NamedTuple):
     agent: BaseAgent
     manifest: AgentACPDescriptor
+    schema: Mapping[Hashable, Any]
 
 
 def _load_adapters() -> List[BaseAdapter]:
@@ -122,10 +124,15 @@ Check that the module name and export symbol in 'AGENTS_REF' env variable are co
     else:
         raise ImportError("Failed to load agent manifest")
 
+    try:
+        schema = generate_agent_oapi(manifest)
+    except Exception as e:
+        raise ImportError("Failed to generate OAPI schema:", e)
+
     logger.info(f"Loaded Agent from {module.__file__}")
     logger.info(f"Agent Type: {type(agent).__name__}")
 
-    return AgentInfo(agent=agent, manifest=manifest)
+    return AgentInfo(agent=agent, manifest=manifest, schema=schema)
 
 
 def load_agents():
@@ -184,3 +191,10 @@ def search_agents(search_request: AgentSearchRequest) -> List[Agent]:
             or search_request.version == agent.manifest.metadata.ref.version
         )
     ]
+
+
+def get_agent_openapi_schema(agent_id: str) -> str:
+    if agent_id not in AGENTS:
+        raise ValueError(f'Agent "{agent_id}" not found')
+
+    return json.dumps(AGENTS[agent_id].schema, indent=2)

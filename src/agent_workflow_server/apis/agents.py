@@ -10,11 +10,16 @@ from fastapi import (  # noqa: F401
     Body,
     HTTPException,
     Path,
+    Response,
 )
 from pydantic import Field, StrictStr
 from typing_extensions import Annotated
 
-from agent_workflow_server.agents.load import get_agent, get_agent_info
+from agent_workflow_server.agents.load import (
+    get_agent,
+    get_agent_info,
+    get_agent_openapi_schema,
+)
 from agent_workflow_server.generated.models.agent import Agent
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,
@@ -95,3 +100,30 @@ async def search_agents(
         return agents
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+@router.get(
+    "/agents/{agent_id}/openapi",
+    responses={
+        200: {
+            "content": {"application/json": {"schema": {"type": "object"}}},
+            "description": "Success",
+        },
+        404: {"model": str, "description": "Not Found"},
+    },
+    tags=["Agents"],
+    summary="Get agent-specific OpenAPI",
+    response_model_by_alias=True,
+)
+async def get_agent_openapi(
+    agent_id: Annotated[StrictStr, Field(description="The ID of the agent.")] = Path(
+        ..., description="The ID of the agent."
+    ),
+) -> Response:
+    """Get the OpenAPI schema for an agent by ID."""
+
+    try:
+        openapi = get_agent_openapi_schema(agent_id)
+        return Response(content=openapi, media_type="application/json")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
