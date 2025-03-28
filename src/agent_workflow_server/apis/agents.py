@@ -132,6 +132,7 @@ async def get_agent_openapi(
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+
 @public_router.get(
     "/agents/{agent_id}/docs",
     responses={
