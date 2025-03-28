@@ -10,8 +10,11 @@ from fastapi import (  # noqa: F401
     Body,
     HTTPException,
     Path,
+    Request,
     Response,
 )
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse
 from pydantic import Field, StrictStr
 from typing_extensions import Annotated
 
@@ -29,6 +32,7 @@ from agent_workflow_server.generated.models.agent_search_request import (
 )
 
 router = APIRouter()
+public_router = APIRouter()
 
 
 @router.get(
@@ -102,7 +106,7 @@ async def search_agents(
         raise HTTPException(status_code=422, detail=str(e))
 
 
-@router.get(
+@public_router.get(
     "/agents/{agent_id}/openapi",
     responses={
         200: {
@@ -127,3 +131,29 @@ async def get_agent_openapi(
         return Response(content=openapi, media_type="application/json")
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@public_router.get(
+    "/agents/{agent_id}/docs",
+    responses={
+        200: {
+            "content": {"text/html": {}},
+            "description": "Success",
+        },
+        404: {"model": str, "description": "Not Found"},
+    },
+    tags=["Agents"],
+    summary="Get Agent specific Swagger UI",
+)
+async def get_agent_docs(
+    request: Request,
+    agent_id: Annotated[StrictStr, Field(description="The ID of the agent.")] = Path(
+        ...,
+        description="The ID of the agent.",
+    ),
+) -> HTMLResponse:
+    """Get the Swagger UI documentation for an agent by ID."""
+    return get_swagger_ui_html(
+        openapi_url=request.url_for("get_agent_openapi", agent_id=agent_id),
+        title="Agent API Documentation",
+    )

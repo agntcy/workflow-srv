@@ -45,12 +45,29 @@ def setup_api_key_auth(app: FastAPI) -> None:
             routes=app.routes,
         )
 
-        openapi_schema["components"]["securitySchemes"] = {
-            "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": API_KEY_NAME}
-        }
-        openapi_schema["security"] = [{"ApiKeyAuth": []}]
-
-        app.openapi_schema = openapi_schema
+        app.openapi_schema = add_authentication_to_spec(openapi_schema)
         return app.openapi_schema
 
     app.openapi = custom_openapi
+
+
+def add_authentication_to_spec(spec_dict: dict) -> dict:
+    """Add API key authentication to an OpenAPI spec"""
+    # Add security scheme
+    if "components" not in spec_dict:
+        spec_dict["components"] = {}
+
+    spec_dict["components"]["securitySchemes"] = {
+        "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": API_KEY_NAME}
+    }
+
+    # Add global security requirement
+    spec_dict["security"] = [{"ApiKeyAuth": []}]
+
+    # Ensure all operations have security requirement
+    for path in spec_dict["paths"].values():
+        for operation in path.values():
+            if isinstance(operation, dict):
+                operation["security"] = [{"ApiKeyAuth": []}]
+
+    return spec_dict
