@@ -49,6 +49,8 @@ The Agent Workflow Server, and the underlying Agent, could be optionally authent
 
 Once the Agent Workflow Server is running, interactive API docs are available under `/docs` endpoint, redoc documentation under `/redoc` endpoint
 
+For detailed API documentation specific to an agent, access the interactive documentation at `/agent/{agent_id}/docs`, where `{agent_id}` is the identifier of your deployed agent.
+
 ## Contributing
 
 ### ACP API Contribution
