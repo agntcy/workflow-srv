@@ -102,9 +102,17 @@ def _add_default_agent_id(spec_dict, agent_id: str):
 
 
 def generate_agent_oapi(descriptor: AgentACPDescriptor, agent_id: str):
-    spec_dict, base_uri = read_from_filename(
-        os.getenv("ACP_SPEC_PATH", "acp-spec/openapi.json")
-    )
+    spec_path = os.getenv("ACP_SPEC_PATH", "acp-spec/openapi.json")
+    
+    # Check if file exists
+    # TODO: Remove this check when the spec is guaranteed to be present
+    if not os.path.exists(spec_path):
+        return "Unable to find the base OpenAPI spec file."
+        
+    try:
+        spec_dict, base_uri = read_from_filename(spec_path)
+    except FileNotFoundError:
+        return None
 
     # If no exception is raised by validate(), the spec is valid.
     validate(spec_dict)
