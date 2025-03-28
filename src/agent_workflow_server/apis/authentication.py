@@ -6,7 +6,6 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Security
-from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.security.api_key import APIKeyHeader
 from starlette.status import HTTP_401_UNAUTHORIZED
@@ -50,24 +49,6 @@ def setup_api_key_auth(app: FastAPI) -> None:
         return app.openapi_schema
 
     app.openapi = custom_openapi
-
-    # Override the default swagger UI to include persistent auth
-    def custom_swagger_ui_html():
-        return get_swagger_ui_html(
-            openapi_url=app.openapi_url,
-            title=app.title,
-            swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
-            swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
-            swagger_favicon_url="/static/favicon.png",
-            init_oauth={},
-            swagger_ui_parameters={
-                "persistAuthorization": True,
-                "displayRequestDuration": True,
-                "tryItOutEnabled": True,
-            },
-        )
-
-    app.swagger_ui_html = custom_swagger_ui_html
 
 
 def add_authentication_to_spec(spec_dict: dict) -> dict:
