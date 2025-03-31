@@ -89,15 +89,26 @@ def _gen_oas_callback(descriptor: AgentACPDescriptor, spec_dict):
 
 
 def _add_default_agent_id(spec_dict, agent_id: str):
-    """Add default values to common parameters in the OpenAPI spec"""
+    """Add default values to common parameters and request bodies in the OpenAPI spec"""
+    # Update schemas in components that contain agent_id
+    if "schemas" in spec_dict.get("components", {}):
+        for schema in spec_dict["components"]["schemas"].values():
+            if isinstance(schema, dict) and "properties" in schema:
+                if "agent_id" in schema["properties"]:
+                    schema["properties"]["agent_id"]["default"] = agent_id
+
+    # Handle parameters in path operations
     for path_item in spec_dict["paths"].values():
         for operation in path_item.values():
-            if isinstance(operation, dict) and "parameters" in operation:
+            if not isinstance(operation, dict):
+                continue
+            
+            if "parameters" in operation:
                 for param in operation["parameters"]:
-                    # Add default value for agent_id parameter
                     if param.get("name") == "agent_id":
                         param["schema"] = param.get("schema", {})
                         param["schema"]["default"] = agent_id
+
     return spec_dict
 
 
