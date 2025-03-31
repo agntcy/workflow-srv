@@ -23,6 +23,7 @@ from agent_workflow_server.generated.models.run_create_stateless import (
 )
 from agent_workflow_server.generated.models.run_output import (
     RunError,
+    RunInterrupt,
     RunOutput,
     RunResult,
 )
@@ -40,8 +41,6 @@ from agent_workflow_server.services.validation import (
     validate_run_create as validate,
 )
 
-from ..utils.tools import serialize_to_dict
-
 router = APIRouter()
 
 
@@ -54,6 +53,11 @@ async def _validate_run_create(
     except InvalidFormatException as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
 
@@ -72,8 +76,13 @@ async def _wait_and_return_run_output(run_id: str) -> RunWaitResponseStateless:
     if run.status == "success" and run_output is not None:
         return RunWaitResponseStateless(
             run=run,
+            output=RunOutput(RunResult(type="result", values=run_output)),
+        )
+    elif run.status == "interrupted":
+        return RunWaitResponseStateless(
+            run=run,
             output=RunOutput(
-                RunResult(type="result", values=serialize_to_dict(run_output))
+                RunInterrupt(type="interrupt", interrupt={"default": run_output})
             ),
         )
     else:
@@ -244,7 +253,7 @@ async def resume_stateless_run(
     body: Dict[str, Any] = Body(None, description=""),
 ) -> RunStateless:
     """Provide the needed input to a run to resume its execution. Can only be called for runs that are in the interrupted state Schema of the provided input must match with the schema specified in the agent specs under interrupts for the interrupt type the agent generated for this specific interruption."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    return await Runs.resume(run_id, body)
 
 
 @router.post(

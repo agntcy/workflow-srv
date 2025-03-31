@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from itertools import islice
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
 from agent_workflow_server.generated.models.run_create_stateless import (
@@ -171,6 +171,29 @@ class Runs:
         return list(
             islice(islice(runs, search_request.offset, None), search_request.limit)
         )
+
+    @staticmethod
+    async def resume(run_id: str, input: Dict[str, Any]) -> ApiRun:
+        # TODO: implement resume
+
+        # run = DB.get_run(run_id)
+        # if run is None:
+        #     raise Exception("Run not found")
+        # if run["status"] != "interrupted":
+        #     raise Exception("Run is not in interrupted state")
+
+        # new_run = _make_run(run_create)
+        # run_info = RunInfo(
+        #     run_id=new_run["run_id"],
+        #     attempts=0,
+        # )
+        # DB.create_run(new_run)
+        # DB.create_run_info(run_info)
+
+        # await RUNS_QUEUE.put(new_run["run_id"])
+        # return _to_api_model(new_run)
+
+        ...
 
     @staticmethod
     async def set_status(run_id: str, status: RunStatus):

@@ -4,9 +4,11 @@
 from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
+from langgraph.constants import INTERRUPT
 from langgraph.graph.graph import CompiledGraph, Graph
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
+from agent_workflow_server.services.message import Message
 from agent_workflow_server.storage.models import Config
 
 
@@ -33,6 +35,17 @@ class LangGraphAgent(BaseAgent):
             )
             if config
             else None,
-            stream_mode="values",
         ):
-            yield event
+            for k, v in event.items():
+                if k == INTERRUPT:
+                    yield Message(
+                        type="interrupt",
+                        event=k,
+                        data=v[0].value,
+                    )
+                else:
+                    yield Message(
+                        type="message",
+                        event=k,
+                        data=v,
+                    )

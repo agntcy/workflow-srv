@@ -7,6 +7,7 @@ from typing import Optional
 from llama_index.core.workflow import Workflow
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
+from agent_workflow_server.services.message import Message
 from agent_workflow_server.storage.models import Config
 
 
@@ -25,9 +26,15 @@ class LlamaIndexAgent(BaseAgent):
     def __init__(self, agent: Workflow):
         self.agent = agent
 
-    async def astream(self, input: dict, config: Config):
+    async def astream(self, input: dict, config: Optional[Config]):
         handler = self.agent.run(**input)
         async for event in handler.stream_events():
-            yield event
+            yield Message(
+                type="message",
+                data=event,
+            )
         final_result = await handler
-        yield final_result
+        yield Message(
+            type="message",
+            data=final_result,
+        )

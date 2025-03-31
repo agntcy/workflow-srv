@@ -59,7 +59,12 @@ ADAPTERS = _load_adapters()
 def _read_manifest(path: str) -> AgentACPDescriptor:
     if os.path.isfile(path):
         with open(path, "r") as file:
-            manifest_data = json.load(file)
+            try:
+                manifest_data = json.load(file)
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Invalid JSON format in manifest file: {path}. Error: {e}"
+                )
             # print full path
             logger.info(f"Loaded Agent Manifest from {os.path.abspath(path)}")
         return AgentACPDescriptor(**manifest_data)

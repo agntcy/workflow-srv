@@ -9,12 +9,10 @@ from typing import Any, Dict
 
 from dotenv import load_dotenv
 
-from agent_workflow_server.logger.custom_logger import CustomLoggerHandler
+import agent_workflow_server.logging.logger  # noqa: F401
 
 from .models import Run, RunInfo
 from .service import DBOperations
-
-logging.basicConfig(level=logging.INFO, handlers=[CustomLoggerHandler])
 
 logger = logging.getLogger(__name__)
 
