@@ -11,7 +11,7 @@ from agent_workflow_server.services.validation import (
     InvalidFormatException,
     validate_output,
 )
-from agent_workflow_server.storage.models import RunInfo
+from agent_workflow_server.storage.models import Interrupt, RunInfo
 from agent_workflow_server.storage.storage import DB
 from agent_workflow_server.utils.tools import make_serializable
 
@@ -104,7 +104,6 @@ async def worker(worker_id: int):
                     await Runs.Stream.publish(run_id, message)
                     last_message = message
                     if last_message.type == "interrupt":
-                        await Runs.set_status(run_id, "interrupted")
                         log_run(
                             worker_id,
                             run_id,
@@ -122,7 +121,7 @@ async def worker(worker_id: int):
 
             run_info["ended_at"] = ended_at
             run_info["exec_s"] = ended_at - started_at
-            run_info["queue_s"] = started_at - run["created_at"].timestamp()
+            run_info["queue_s"] = started_at - run_info["queued_at"].timestamp()
 
             DB.update_run_info(run_id, run_info)
 
@@ -136,7 +135,14 @@ async def worker(worker_id: int):
                 )
                 DB.add_run_output(run_id, last_message.data)
                 await Runs.Stream.publish(run_id, Message(type="control", data="done"))
-                await Runs.set_status(run_id, "success")
+                if last_message.type == "interrupt":
+                    interrupt = Interrupt(
+                        event=last_message.event, ai_data=last_message.data
+                    )
+                    DB.update_run(run_id, {"interrupt": interrupt})
+                    await Runs.set_status(run_id, "interrupted")
+                else:
+                    await Runs.set_status(run_id, "success")
                 log_run(worker_id, run_id, "succeeded", **run_stats(run_info))
 
             except InvalidFormatException as error:
@@ -152,7 +158,7 @@ async def worker(worker_id: int):
                 {
                     "ended_at": ended_at,
                     "exec_s": ended_at - started_at,
-                    "queue_s": (started_at - run["created_at"].timestamp()),
+                    "queue_s": (started_at - run_info["queued_at"].timestamp()),
                 }
             )
 
@@ -166,7 +172,7 @@ async def worker(worker_id: int):
                 {
                     "ended_at": ended_at,
                     "exec_s": ended_at - started_at,
-                    "queue_s": (started_at - run["created_at"].timestamp()),
+                    "queue_s": (started_at - run_info["queued_at"].timestamp()),
                 }
             )
 

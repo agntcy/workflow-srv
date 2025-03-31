@@ -253,7 +253,13 @@ async def resume_stateless_run(
     body: Dict[str, Any] = Body(None, description=""),
 ) -> RunStateless:
     """Provide the needed input to a run to resume its execution. Can only be called for runs that are in the interrupted state Schema of the provided input must match with the schema specified in the agent specs under interrupts for the interrupt type the agent generated for this specific interruption."""
-    return await Runs.resume(run_id, body)
+    try:
+        return await Runs.resume(run_id, body)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.post(

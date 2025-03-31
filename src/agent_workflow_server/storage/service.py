@@ -74,9 +74,9 @@ class DBOperations:
         run = self.get_run(run_id)
         return run.get("status") if run else None
 
-    def update_run_status(self, run_id: str, status: RunStatus) -> None:
+    def update_run_status(self, run_id: str, status: RunStatus) -> Optional[Run]:
         """Update the status of a Run"""
-        self.update_run(run_id, {"status": status})
+        return self.update_run(run_id, {"status": status})
 
     def add_run_output(self, run_id: str, output: Any) -> None:
         """Add the output of a Run"""
