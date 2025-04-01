@@ -36,3 +36,11 @@ class RunInfo(TypedDict):
     ended_at: Optional[datetime]
     exec_s: Optional[float]
     queue_s: Optional[float]
+
+class Thread(TypedDict):
+    """Definition of a Thread record"""
+
+    thread_id: str
+    metadata: Optional[Dict[str, Any]]
+    created_at: datetime
+    updated_at: datetime
