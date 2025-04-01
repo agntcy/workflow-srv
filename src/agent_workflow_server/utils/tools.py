@@ -24,7 +24,7 @@ def make_serializable(v: Any):
     elif (
         isinstance(v, BaseModel) and hasattr(v, "model_dump") and callable(v.model_dump)
     ):
-        return v.model_dump()
+        return v.model_dump(mode="json")
     elif isinstance(v, BaseModel) and hasattr(v, "dict") and callable(v.dict):
         return v.dict()
     elif isinstance(v, Enum):
