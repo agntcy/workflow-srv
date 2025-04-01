@@ -9,24 +9,54 @@ import pytest
 from pytest_mock import MockerFixture
 
 from agent_workflow_server.agents.load import load_agents
+from agent_workflow_server.generated.models.config import Config
 from agent_workflow_server.generated.models.run_search_request import (
     RunSearchRequest,
 )
 from agent_workflow_server.services.queue import start_workers
 from agent_workflow_server.services.runs import ApiRun, ApiRunCreate, Runs
+from agent_workflow_server.storage.models import RunStatus
 from agent_workflow_server.storage.storage import DB
 from tests.mock import (
     MOCK_AGENT_ID,
     MOCK_RUN_INPUT,
+    MOCK_RUN_INPUT_INTERRUPT,
     MOCK_RUN_OUTPUT,
+    MOCK_RUN_OUTPUT_INTERRUPT,
     MockAdapter,
 )
 
-run_create_mock = ApiRunCreate(agent_id=MOCK_AGENT_ID, input=MOCK_RUN_INPUT, config={})
-
 
 @pytest.mark.asyncio
-async def test_invoke(mocker: MockerFixture):
+@pytest.mark.parametrize(
+    "run_create_mock, expected_status, expected_output",
+    [
+        (
+            ApiRunCreate(
+                agent_id=MOCK_AGENT_ID,
+                input=MOCK_RUN_INPUT,
+                config=Config(
+                    tags=["test"],
+                    recursion_limit=3,
+                    configurable={"mock-key": "mock-value"},
+                ),
+            ),
+            "success",
+            MOCK_RUN_OUTPUT,
+        ),
+        (
+            ApiRunCreate(agent_id=MOCK_AGENT_ID, input=MOCK_RUN_INPUT_INTERRUPT),
+            "interrupted",
+            MOCK_RUN_OUTPUT_INTERRUPT,
+        ),
+    ],
+)
+async def test_invoke(
+    mocker: MockerFixture,
+    run_create_mock: ApiRunCreate,
+    expected_status: RunStatus,
+    expected_output: dict,
+):
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
     try:
@@ -46,9 +76,12 @@ async def test_invoke(mocker: MockerFixture):
         else:
             assert True
 
-        assert run.status == "success"
+        assert run.status == expected_status
         assert run.run_id == new_run.run_id
-        assert output == MOCK_RUN_OUTPUT
+        assert run.agent_id == run_create_mock.agent_id
+        assert run.creation.agent_id == run_create_mock.agent_id
+        assert run.creation.config == run_create_mock.config
+        assert output == expected_output
     finally:
         worker_task.cancel()
         try:
@@ -61,6 +94,8 @@ async def test_invoke(mocker: MockerFixture):
 @pytest.mark.parametrize("timeout", [0.5, 1, 1.0, 2.51293])
 async def test_invoke_timeout(mocker: MockerFixture, timeout: float):
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
+
+    run_create_mock = ApiRunCreate(agent_id=MOCK_AGENT_ID, input=MOCK_RUN_INPUT)
 
     try:
         load_agents()
