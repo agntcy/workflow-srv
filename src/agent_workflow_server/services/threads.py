@@ -1,12 +1,18 @@
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import uuid4
 
 from agent_workflow_server.generated.models.thread import (
     Thread as ApiThread,
 )
+from agent_workflow_server.generated.models.thread_checkpoint import (
+    ThreadCheckpoint as ApiThreadCheckpoint,
+)
 from agent_workflow_server.generated.models.thread_create import ThreadCreate
+from agent_workflow_server.generated.models.thread_state import (
+    ThreadState as ApiThreadState,
+)
 from agent_workflow_server.storage.models import Thread
 from agent_workflow_server.storage.storage import DB
 
@@ -134,3 +140,28 @@ class Threads:
         """Search for threads based on filters"""
         threads = DB.search_thread(filters)
         return [_to_api_model(thread) for thread in threads]
+
+    @staticmethod
+    async def get_thread_state(
+        thread_id: str, limit: int, before: str
+    ) -> Optional[List[ApiThreadState]]:
+        """Get the state of a thread"""
+        thread = DB.get_thread(thread_id)
+        if thread is None:
+            return None
+
+        thread_states = thread["states"]
+        if thread_states is None:
+            return None
+
+        ## TODO proper handling of limit and before
+        ## TODO proper handling of messages and metadata
+        return [
+            ApiThreadState(
+                checkpoint=ApiThreadCheckpoint(checkpoint_id=state["checkpoint_id"]),
+                values=state["values"],
+                messages=state.get("messages"),
+                metadata=state.get("metadata"),
+            )
+            for state in thread_states
+        ]

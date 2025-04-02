@@ -38,6 +38,15 @@ class RunInfo(TypedDict):
     queue_s: Optional[float]
 
 
+class ThreadState(TypedDict):
+    """Definition of a ThreadState record"""
+
+    checkpoint_id: str
+    values: Dict[str, Any]
+    messages: Optional[List[Dict[str, Any]]]
+    metadata: Optional[Dict[str, Any]]
+
+
 class Thread(TypedDict):
     """Definition of a Thread record"""
 
@@ -46,3 +55,4 @@ class Thread(TypedDict):
     status: str
     created_at: datetime
     updated_at: datetime
+    states: Optional[List[ThreadState]]

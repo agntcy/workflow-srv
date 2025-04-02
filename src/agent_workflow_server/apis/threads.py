@@ -150,9 +150,12 @@ async def get_thread_history(
     before: Optional[StrictStr] = Query(None, description="", alias="before"),
 ) -> List[ThreadState]:
     """Get all past states for a thread."""
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented"
-    )
+
+    thread = await Threads.get_thread_state(thread_id, limit, before)
+    if thread is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
+
+    return thread
 
 
 @router.patch(
@@ -173,9 +176,9 @@ async def patch_thread(
     thread_patch: ThreadPatch = Body(None, description=""),
 ) -> Thread:
     """Update a thread."""
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented"
-    )
+    thread = await Threads.update_thread(thread_id, thread_patch)
+    if thread is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
 
 @router.post(
