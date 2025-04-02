@@ -186,7 +186,7 @@ async def test_search_runs(
         )
 
         try:
-            runs = Runs.search(
+            runs = Runs.search_for_runs(
                 RunSearchRequest(
                     agent_id=agent_id, status=status, offset=offset, limit=limit
                 )

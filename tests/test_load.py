@@ -9,7 +9,7 @@ from agent_workflow_server.agents.load import (
     get_agent,
     get_agent_info,
     load_agents,
-    search_agents,
+    search_for_agents,
 )
 from agent_workflow_server.generated.models.agent_search_request import (
     AgentSearchRequest,
@@ -92,7 +92,7 @@ def test_search_agents(
     assert len(AGENTS) == 1
 
     try:
-        agents = search_agents(AgentSearchRequest(name=name, version=version))
+        agents = search_for_agents(AgentSearchRequest(name=name, version=version))
         assert not exception
         assert len(agents) == expected
     except Exception:

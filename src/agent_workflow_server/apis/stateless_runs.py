@@ -261,7 +261,7 @@ async def search_stateless_runs(
     run_search_request: RunSearchRequest = Body(None, description=""),
 ) -> List[RunStateless]:
     """Search for stateless run.  This endpoint also functions as the endpoint to list all stateless Runs."""
-    return Runs.search(run_search_request)
+    return Runs.search_for_runs(run_search_request)
 
 
 @router.get(

@@ -149,7 +149,7 @@ class Runs:
         return [_to_api_model(run) for run in db_runs]
 
     @staticmethod
-    def search(search_request: RunSearchRequest) -> List[ApiRun]:
+    def search_for_runs(search_request: RunSearchRequest) -> List[ApiRun]:
         filters = {}
         if search_request.agent_id:
             filters["agent_id"] = search_request.agent_id

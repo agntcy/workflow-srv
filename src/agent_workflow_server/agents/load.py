@@ -172,7 +172,7 @@ def get_agent_from_agent_info(agent_id: str, agent_info: AgentInfo) -> Agent:
     return Agent(agent_id=agent_id, metadata=agent_info.manifest.metadata)
 
 
-def search_agents(search_request: AgentSearchRequest) -> List[Agent]:
+def search_for_agents(search_request: AgentSearchRequest) -> List[Agent]:
     if not search_request.name and not search_request.version:
         raise ValueError("At least one of 'name' or 'version' must be provided")
 

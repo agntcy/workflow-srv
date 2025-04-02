@@ -22,6 +22,7 @@ from agent_workflow_server.agents.load import (
     get_agent,
     get_agent_info,
     get_agent_openapi_schema,
+    search_for_agents,
 )
 from agent_workflow_server.generated.models.agent import Agent
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
@@ -100,7 +101,7 @@ async def search_agents(
     """Returns a list of agents matching the criteria provided in the request.  This endpoint also functions as the endpoint to list all agents."""
 
     try:
-        agents = search_agents(agent_search_request)
+        agents = search_for_agents(agent_search_request)
         return agents
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
