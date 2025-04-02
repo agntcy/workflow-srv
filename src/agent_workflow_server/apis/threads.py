@@ -3,34 +3,62 @@
 
 # coding: utf-8
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
     Body,
     HTTPException,
     Path,
+    Query,
     status,
 )
-from pydantic import Field, StrictStr
+from pydantic import Field, StrictInt, StrictStr
 from typing_extensions import Annotated
 
 from agent_workflow_server.generated.models.run import Run
 from agent_workflow_server.generated.models.thread import Thread
 from agent_workflow_server.generated.models.thread_create import ThreadCreate
+from agent_workflow_server.generated.models.thread_patch import ThreadPatch
 from agent_workflow_server.generated.models.thread_search_request import (
     ThreadSearchRequest,
 )
+from agent_workflow_server.generated.models.thread_state import ThreadState
 from agent_workflow_server.services.threads import DuplicatedThreadError, Threads
 
 router = APIRouter()
 
 
 @router.post(
-    "/threads",
+    "/threads/{thread_id}/copy",
     responses={
         200: {"model": Thread, "description": "Success"},
         404: {"model": str, "description": "Not Found"},
+        422: {"model": str, "description": "Validation Error"},
+    },
+    tags=["Threads"],
+    summary="Copy Thread",
+    response_model_by_alias=True,
+)
+async def copy_thread(
+    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(..., description="The ID of the thread."),
+) -> Thread:
+    """Create a new thread with a copy of the state and checkpoints from an existing thread."""
+    try:
+        copydThread = await Threads.copy_thread(thread_id)
+    except DuplicatedThreadError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Thread with ID {thread_id} not found",
+        )
+
+    return copydThread    
+
+
+@router.post(
+    "/threads",
+    responses={
+        200: {"model": Thread, "description": "Success"},
         409: {"model": str, "description": "Conflict"},
         422: {"model": str, "description": "Validation Error"},
     },
@@ -41,8 +69,7 @@ router = APIRouter()
 async def create_thread(
     thread_create: ThreadCreate = Body(None, description=""),
 ) -> Thread:
-    """Create an empty thread. This is useful to associate metadata to a thread."""
-
+    """Create an empty thread. """
     raiseExistError = True if thread_create.if_exists == "raise" else False
     try:
         newThread = await Threads.create_thread(thread_create, raiseExistError)
@@ -60,7 +87,6 @@ async def create_thread(
     responses={
         200: {"model": Thread, "description": "Success"},
         404: {"model": str, "description": "Not Found"},
-        409: {"model": str, "description": "Conflict"},
         422: {"model": str, "description": "Validation Error"},
     },
     tags=["Threads"],
@@ -81,32 +107,10 @@ async def delete_thread(
 
 
 @router.get(
-    "/runs/{run_id}/threadstate",
-    responses={
-        200: {"model": object, "description": "Success"},
-        404: {"model": str, "description": "Not Found"},
-        409: {"model": str, "description": "Conflict"},
-        422: {"model": str, "description": "Validation Error"},
-    },
-    tags=["Threads"],
-    summary="Retrieve the thread state at the end of the run",
-    response_model_by_alias=True,
-)
-async def get_run_threadstate(
-    run_id: Annotated[StrictStr, Field(description="The ID of the run.")] = Path(
-        ..., description="The ID of the run."
-    ),
-) -> object:
-    """This call can be used only for agents that support thread, i.e. for Runs that specify a thread ID. It can be called only on runs that are in &#x60;success&#x60; status. It returns the thread state at the end of the Run. Can be used to reconstruct the evolution of the thread state in its history."""
-    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
-
-
-@router.get(
     "/threads/{thread_id}",
     responses={
         200: {"model": Thread, "description": "Success"},
         404: {"model": str, "description": "Not Found"},
-        409: {"model": str, "description": "Conflict"},
         422: {"model": str, "description": "Validation Error"},
     },
     tags=["Threads"],
@@ -125,47 +129,45 @@ async def get_thread(
 
     return thread
 
-
 @router.get(
     "/threads/{thread_id}/history",
     responses={
-        200: {"model": List[Run], "description": "Success"},
+        200: {"model": List[ThreadState], "description": "Success"},
         404: {"model": str, "description": "Not Found"},
-        409: {"model": str, "description": "Conflict"},
         422: {"model": str, "description": "Validation Error"},
     },
     tags=["Threads"],
-    summary="Retrieve the list of runs and associated state at the end of each run.",
+    summary="Get Thread History",
     response_model_by_alias=True,
 )
 async def get_thread_history(
-    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
-        ..., description="The ID of the thread."
-    ),
-) -> List[Run]:
-    """Retrieve ordered list of runs for this thread in chronological order."""
+    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(..., description="The ID of the thread."),
+    limit: Optional[StrictInt] = Query(10, description="", alias="limit"),
+    before: Optional[StrictStr] = Query(None, description="", alias="before"),
+) -> List[ThreadState]:
+    """Get all past states for a thread."""
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
 
 
-@router.get(
-    "/threads/{thread_id}/state",
+
+@router.patch(
+    "/threads/{thread_id}",
     responses={
-        200: {"model": object, "description": "Success"},
+        200: {"model": Thread, "description": "Success"},
         404: {"model": str, "description": "Not Found"},
-        409: {"model": str, "description": "Conflict"},
         422: {"model": str, "description": "Validation Error"},
     },
     tags=["Threads"],
-    summary="Retrieve the current state associated with the thread",
+    summary="Patch Thread",
     response_model_by_alias=True,
 )
-async def get_thread_state(
-    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
-        ..., description="The ID of the thread."
-    ),
-) -> object:
-    """Retrieve the the current state associated with the thread"""
+async def patch_thread(
+    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(..., description="The ID of the thread."),
+    thread_patch: ThreadPatch = Body(None, description=""),
+) -> Thread:
+    """Update a thread."""
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
+
 
 
 @router.post(
