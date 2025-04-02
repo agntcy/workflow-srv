@@ -118,7 +118,7 @@ class DBOperations:
         updated_run_info = {**run_info, **updates}
         self._runs_info[run_id] = updated_run_info
         return updated_run_info
-    
+
     def create_thread(self, thread: Thread) -> Thread:
         """Create a new Thread"""
         thread_id = str(thread["thread_id"])
@@ -126,15 +126,15 @@ class DBOperations:
             raise ValueError(f"Thread with ID {thread_id} already exists")
         self._threads[thread_id] = thread
         return thread
-    
+
     def get_thread(self, thread_id: str) -> Optional[Thread]:
         """Get a Thread by ID"""
         return self._threads.get(thread_id)
-    
+
     def list_threads(self) -> List[Thread]:
         """List all Threads"""
         return list(self._threads.values())
-    
+
     def update_thread(self, thread_id: str, updates: dict) -> Optional[Thread]:
         """Update a Thread with the given updates"""
         if thread_id not in self._threads:
@@ -143,14 +143,14 @@ class DBOperations:
         updated_thread = {**thread, **updates, "updated_at": datetime.now()}
         self._threads[thread_id] = updated_thread
         return updated_thread
-    
+
     def delete_thread(self, thread_id: str) -> bool:
         """Delete a Thread"""
         if thread_id not in self._threads:
             return False
         del self._threads[thread_id]
         return True
-    
+
     def search_thread(self, filters: dict) -> List[Thread]:
         """Search Threads by filters"""
         results = []

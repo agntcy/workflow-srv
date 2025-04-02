@@ -28,6 +28,7 @@ class InMemoryDB(DBOperations):
         self._runs: Dict[str, Run] = {}
         self._runs_info: Dict[str, RunInfo] = {}
         self._runs_output: Dict[str, Any] = {}
+        self._threads: Dict[str, Any] = {}
 
         use_fs_storage = os.getenv("AGWS_STORAGE_PERSIST", "True") == "True"
         if use_fs_storage:
@@ -38,7 +39,7 @@ class InMemoryDB(DBOperations):
             logger.debug("Registering database save handler on exit")
             atexit.register(self._save_to_file)
 
-        super().__init__(self._runs, self._runs_info, self._runs_output)
+        super().__init__(self._runs, self._runs_info, self._runs_output, self._threads)
         logger.debug("InMemoryDB initialization complete")
 
     def _save_to_file(self) -> None:

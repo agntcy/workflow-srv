@@ -20,6 +20,7 @@ from agent_workflow_server.generated.models.thread_create import ThreadCreate
 from agent_workflow_server.generated.models.thread_search_request import (
     ThreadSearchRequest,
 )
+from agent_workflow_server.services.threads import DuplicatedThreadError, Threads
 
 router = APIRouter()
 
@@ -40,7 +41,17 @@ async def create_thread(
     thread_create: ThreadCreate = Body(None, description=""),
 ) -> Thread:
     """Create an empty thread. This is useful to associate metadata to a thread."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+
+    raiseExistError = True if thread_create.if_exists == "raise" else False
+    try:
+        newThread = await Threads.create_thread(thread_create, raiseExistError)
+    except DuplicatedThreadError:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Thread with ID {thread_create.thread_id} already exists",
+        )
+
+    return newThread
 
 
 @router.delete(
@@ -103,7 +114,11 @@ async def get_thread(
     ),
 ) -> Thread:
     """Get a thread from its ID."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    thread = await Threads.get_thread_by_id(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail="Thread not found")
+
+    return thread
 
 
 @router.get(
@@ -162,4 +177,8 @@ async def search_threads(
     thread_search_request: ThreadSearchRequest = Body(None, description=""),
 ) -> List[Thread]:
     """Search for threads.  This endpoint also functions as the endpoint to list all threads."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    threads = await Threads.search(thread_search_request)
+    if threads is None:
+        raise HTTPException(status_code=404, detail="Thread not found")
+
+    return threads
