@@ -10,6 +10,7 @@ from fastapi import (
     Body,
     HTTPException,
     Path,
+    status,
 )
 from pydantic import Field, StrictStr
 from typing_extensions import Annotated
@@ -47,7 +48,7 @@ async def create_thread(
         newThread = await Threads.create_thread(thread_create, raiseExistError)
     except DuplicatedThreadError:
         raise HTTPException(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             detail=f"Thread with ID {thread_create.thread_id} already exists",
         )
 
@@ -72,7 +73,11 @@ async def delete_thread(
     ),
 ) -> Thread:
     """Delete a thread."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    thread = await Threads.delete_thread(thread_id)
+    if thread is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
+
+    return thread
 
 
 @router.get(
@@ -93,7 +98,7 @@ async def get_run_threadstate(
     ),
 ) -> object:
     """This call can be used only for agents that support thread, i.e. for Runs that specify a thread ID. It can be called only on runs that are in &#x60;success&#x60; status. It returns the thread state at the end of the Run. Can be used to reconstruct the evolution of the thread state in its history."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
 
 
 @router.get(
@@ -116,7 +121,7 @@ async def get_thread(
     """Get a thread from its ID."""
     thread = await Threads.get_thread_by_id(thread_id)
     if thread is None:
-        raise HTTPException(status_code=404, detail="Thread not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
     return thread
 
@@ -139,7 +144,7 @@ async def get_thread_history(
     ),
 ) -> List[Run]:
     """Retrieve ordered list of runs for this thread in chronological order."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
 
 
 @router.get(
@@ -160,7 +165,7 @@ async def get_thread_state(
     ),
 ) -> object:
     """Retrieve the the current state associated with the thread"""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
 
 
 @router.post(
@@ -179,6 +184,6 @@ async def search_threads(
     """Search for threads.  This endpoint also functions as the endpoint to list all threads."""
     threads = await Threads.search(thread_search_request)
     if threads is None:
-        raise HTTPException(status_code=404, detail="Thread not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
     return threads
