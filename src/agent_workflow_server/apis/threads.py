@@ -16,7 +16,6 @@ from fastapi import (
 from pydantic import Field, StrictInt, StrictStr
 from typing_extensions import Annotated
 
-from agent_workflow_server.generated.models.run import Run
 from agent_workflow_server.generated.models.thread import Thread
 from agent_workflow_server.generated.models.thread_create import ThreadCreate
 from agent_workflow_server.generated.models.thread_patch import ThreadPatch
@@ -41,18 +40,20 @@ router = APIRouter()
     response_model_by_alias=True,
 )
 async def copy_thread(
-    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(..., description="The ID of the thread."),
+    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
+        ..., description="The ID of the thread."
+    ),
 ) -> Thread:
     """Create a new thread with a copy of the state and checkpoints from an existing thread."""
     try:
-        copydThread = await Threads.copy_thread(thread_id)
+        copiedThread = await Threads.copy_thread(thread_id)
     except DuplicatedThreadError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Thread with ID {thread_id} not found",
         )
 
-    return copydThread    
+    return copiedThread
 
 
 @router.post(
@@ -69,7 +70,7 @@ async def copy_thread(
 async def create_thread(
     thread_create: ThreadCreate = Body(None, description=""),
 ) -> Thread:
-    """Create an empty thread. """
+    """Create an empty thread."""
     raiseExistError = True if thread_create.if_exists == "raise" else False
     try:
         newThread = await Threads.create_thread(thread_create, raiseExistError)
@@ -129,6 +130,7 @@ async def get_thread(
 
     return thread
 
+
 @router.get(
     "/threads/{thread_id}/history",
     responses={
@@ -141,13 +143,16 @@ async def get_thread(
     response_model_by_alias=True,
 )
 async def get_thread_history(
-    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(..., description="The ID of the thread."),
+    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
+        ..., description="The ID of the thread."
+    ),
     limit: Optional[StrictInt] = Query(10, description="", alias="limit"),
     before: Optional[StrictStr] = Query(None, description="", alias="before"),
 ) -> List[ThreadState]:
     """Get all past states for a thread."""
-    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
-
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented"
+    )
 
 
 @router.patch(
@@ -162,12 +167,15 @@ async def get_thread_history(
     response_model_by_alias=True,
 )
 async def patch_thread(
-    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(..., description="The ID of the thread."),
+    thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
+        ..., description="The ID of the thread."
+    ),
     thread_patch: ThreadPatch = Body(None, description=""),
 ) -> Thread:
     """Update a thread."""
-    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented")
-
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Not implemented"
+    )
 
 
 @router.post(

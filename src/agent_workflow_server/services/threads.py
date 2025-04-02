@@ -90,6 +90,26 @@ class Threads:
         return _to_api_model(newThread)
 
     @staticmethod
+    async def copy_thread(thread_id: str) -> Optional[ApiThread]:
+        """Copy a thread"""
+        thread = DB.get_thread(thread_id)
+        if thread is None:
+            return None
+
+        # Create a new thread with the same metadata and status
+        new_thread = Thread(
+            thread_id=str(uuid4()),  # Generate a new unique ID
+            metadata=thread["metadata"],
+            status=thread["status"],
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+        )
+        # Save the new thread to the database
+        copiedThread = DB.create_thread(new_thread)
+
+        return _to_api_model(copiedThread)
+
+    @staticmethod
     async def list_threads() -> list[ApiThread]:
         """List all threads"""
         threads = DB.list_threads()
