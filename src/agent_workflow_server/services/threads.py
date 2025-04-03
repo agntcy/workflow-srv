@@ -109,6 +109,7 @@ class Threads:
             status=thread["status"],
             created_at=datetime.now(),
             updated_at=datetime.now(),
+            states=thread["states"],
         )
         # Save the new thread to the database
         copiedThread = DB.create_thread(new_thread)
@@ -124,9 +125,51 @@ class Threads:
     @staticmethod
     async def update_thread(thread_id: str, updates: dict) -> Optional[ApiThread]:
         """Update a thread"""
-        thread = DB.update_thread(thread_id, updates)
+
+        # Check if the thread exists
+        thread = DB.get_thread(thread_id)
         if thread is None:
             return None
+
+        # A ThreadPatch object (which is in the updates as a dics) can contain a
+        # checkpoint, metadata (for the thread not for the state), values and messages.
+
+        if "metadata" in updates and updates["metadata"]:
+            metaUpdates = {"metadata": updates["metadata"]}
+            thread = DB.update_thread(thread_id, metaUpdates)
+
+        threadStates = thread["states"]
+
+        # if checkpoint is in updates and has a checkpoint_id in it
+        if "checkpoint" in updates and updates["checkpoint"]:
+            checkpoint = updates["checkpoint"]
+            checkpoint_id = checkpoint["checkpoint_id"]
+            # Check if the checkpoint ID already exists in the thread states
+            if threadStates is None:
+                threadStates = []
+            existing_checkpoints = [state["checkpoint_id"] for state in threadStates]
+            if checkpoint_id in existing_checkpoints:
+                # Update the existing checkpoint state
+                for state in threadStates:
+                    if state["checkpoint_id"] == checkpoint_id:
+                        # update state with new values, messages and metadata
+                        state["values"] = updates["values"]
+                        state["messages"] = updates["messages"]
+
+            else:
+                # Add a new checkpoint state
+                threadStates.append(
+                    {
+                        "checkpoint_id": checkpoint_id,
+                        "values": updates["values"],
+                        "messages": updates["messages"],
+                    }
+                )
+
+        # Update the thread with the new states
+        stateUpdates = {"states": threadStates}
+        thread = DB.update_thread(thread_id, stateUpdates)
+
         return _to_api_model(thread)
 
     @staticmethod

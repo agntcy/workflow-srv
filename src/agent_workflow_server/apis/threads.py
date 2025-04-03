@@ -176,7 +176,7 @@ async def patch_thread(
     thread_patch: ThreadPatch = Body(None, description=""),
 ) -> Thread:
     """Update a thread."""
-    thread = await Threads.update_thread(thread_id, thread_patch)
+    thread = await Threads.update_thread(thread_id, thread_patch.to_dict())
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
