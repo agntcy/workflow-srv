@@ -62,6 +62,10 @@ class DuplicatedThreadError(Exception):
     """Exception raised when a thread with the same ID already exists."""
 
 
+class PendingRunError(Exception):
+    """Exception raised when a thread has pending runs."""
+
+
 class Threads:
     @staticmethod
     async def get_thread_by_id(thread_id: str) -> Optional[ApiThread]:
@@ -176,6 +180,15 @@ class Threads:
     async def delete_thread(thread_id: str) -> bool:
         """Delete a thread"""
         # TODO If the thread contains any pending run, deletion fails.
+        # Get runs associated with the thread and check if any of them pending
+        runs = DB.search_run({"thread_id": thread_id})
+        for run in runs:
+            if run["status"] == "pending":
+                logger.error(
+                    f"Thread {thread_id} cannot be deleted because it has pending runs."
+                )
+                raise PendingRunError()
+
         return DB.delete_thread(thread_id)
 
     @staticmethod

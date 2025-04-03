@@ -23,7 +23,11 @@ from agent_workflow_server.generated.models.thread_search_request import (
     ThreadSearchRequest,
 )
 from agent_workflow_server.generated.models.thread_state import ThreadState
-from agent_workflow_server.services.threads import DuplicatedThreadError, Threads
+from agent_workflow_server.services.threads import (
+    DuplicatedThreadError,
+    PendingRunError,
+    Threads,
+)
 
 router = APIRouter()
 
@@ -86,7 +90,7 @@ async def create_thread(
 @router.delete(
     "/threads/{thread_id}",
     responses={
-        200: {"model": Thread, "description": "Success"},
+        204: {"description": "Success"},
         404: {"model": str, "description": "Not Found"},
         422: {"model": str, "description": "Validation Error"},
     },
@@ -98,13 +102,17 @@ async def delete_thread(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
         ..., description="The ID of the thread."
     ),
-) -> Thread:
+) -> None:
     """Delete a thread."""
-    thread = await Threads.delete_thread(thread_id)
-    if thread is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
-
-    return thread
+    try:
+        success = await Threads.delete_thread(thread_id)
+        if success is False:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
+    except PendingRunError:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Thread has pending runs. Cannot delete.",
+        )
 
 
 @router.get(
