@@ -67,6 +67,15 @@ class PendingRunError(Exception):
 
 
 class Threads:
+    
+    @staticmethod
+    async def check_pending_runs(thread_id: str) -> bool:
+        """Check if a thread has pending runs"""
+        runs = DB.search_run({"thread_id": thread_id, "status": "pending"})
+        if runs:
+            return True
+        return False
+    
     @staticmethod
     async def get_thread_by_id(thread_id: str) -> Optional[ApiThread]:
         """Return a thread by ID"""
@@ -135,7 +144,7 @@ class Threads:
         if thread is None:
             return None
 
-        # A ThreadPatch object (which is in the updates as a dics) can contain a
+        # A ThreadPatch object (which is in the updates as a dict) can contain a
         # checkpoint, metadata (for the thread not for the state), values and messages.
 
         if "metadata" in updates and updates["metadata"]:
@@ -179,15 +188,12 @@ class Threads:
     @staticmethod
     async def delete_thread(thread_id: str) -> bool:
         """Delete a thread"""
-        # TODO If the thread contains any pending run, deletion fails.
         # Get runs associated with the thread and check if any of them pending
-        runs = DB.search_run({"thread_id": thread_id})
-        for run in runs:
-            if run["status"] == "pending":
-                logger.error(
-                    f"Thread {thread_id} cannot be deleted because it has pending runs."
-                )
-                raise PendingRunError()
+        has_pending_runs = await Threads.check_pending_runs(thread_id)
+        if has_pending_runs:
+            raise PendingRunError(
+                f"Thread with ID {thread_id} has pending runs and cannot be deleted."
+            )
 
         return DB.delete_thread(thread_id)
 
