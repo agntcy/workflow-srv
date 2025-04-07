@@ -25,6 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Version check
+        shell: bash
         run: |
           GIT_VERSION=${GITHUB_REF%-*}
           PYTHON_VERSION=$(grep -m 1 version pyproject.toml | grep -e '\d.\d.\d' -o)
