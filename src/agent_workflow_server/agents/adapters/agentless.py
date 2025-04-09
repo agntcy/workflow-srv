@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 from typing import Optional
 
 from agent_workflow_server.agents.agentless import (
@@ -19,6 +20,8 @@ class DummyAgentless: ...
 
 dummyagent = DummyAgentless()
 
+logger = logging.getLogger(__name__)
+
 
 class AgentlessAdapter(BaseAdapter):
     def load_agent(self, agent: object, manifest: dict) -> Optional[BaseAgent]:
@@ -30,7 +33,7 @@ class AgentlessAdapter(BaseAdapter):
 class AgentlessAgent(BaseAgent):
     def __init__(self, manifest: dict):
         self.agent = Agentless(config=AgentlessAgentConfig.model_validate(manifest))
-        print("Agentless agent loaded with manifest:", manifest)
+        logger.debug("Agentless agent loaded with manifest %s", manifest)
 
     async def astream(self, run: Run):
         resp = await self.agent.ainvoke(
