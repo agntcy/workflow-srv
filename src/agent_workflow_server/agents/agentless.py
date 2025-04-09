@@ -1,12 +1,14 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 import logging
-from typing import Optional, List, Dict, Union, Literal, Any, AsyncGenerator
+import json
+from typing import Optional, List, Dict, Union, Literal, Any, Tuple
 from pydantic import Field
 from typing_extensions import TypedDict
+from jinja2.sandbox import SandboxedEnvironment
 
 from openai import AsyncAzureOpenAI
-from pydantic import Field, model_validator, BaseModel
+from pydantic import Field, model_validator, BaseModel, RootModel
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
     ModelMessage,
@@ -17,10 +19,6 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import KnownModelName
 from pydantic_ai.models.openai import OpenAIModel
-
-from agent_workflow_server.services.message import Message
-from agent_workflow_server.storage.models import Run
-from .base import BaseAgent
 
 
 logger = logging.getLogger(__name__)
@@ -34,7 +32,7 @@ SupportedModelName = Union[
     ],
 ]
 
-class AgentIOModelArgs(TypedDict, total=False):
+class AgentlessModelArgs(TypedDict, total=False):
     base_url: str
     api_version: str
     azure_endpoint: str
@@ -43,7 +41,7 @@ class AgentIOModelArgs(TypedDict, total=False):
     organization: str
 
 
-class AgentModelSettings(TypedDict, total=False):
+class AgentlessModelSettings(TypedDict, total=False):
     max_tokens: int
     temperature: float
     top_p: float
@@ -54,12 +52,20 @@ class AgentModelSettings(TypedDict, total=False):
     logit_bias: dict[str, int]
 
 
+class AgentlessMessage(BaseModel):
+    role: Literal["user", "system", "assistant"] = Field(
+        default = "user",
+    )
+    content: str
+
+type AgentlessMessageList = RootModel[List[AgentlessMessage]]
+
 class AgentlessAgentConfig(BaseModel):
-    models: dict[str, AgentIOModelArgs] = Field(
-        default={"azure:gpt-4o-mini": AgentIOModelArgs()},
+    models: dict[str, AgentlessModelArgs] = Field(
+        default={"azure:gpt-4o-mini": AgentlessModelArgs()},
         description="LLM configuration to use.",
     )
-    message_templates: List[Dict[str,str]] = Field(
+    message_templates: List[AgentlessMessage] = Field(
         max_length=4096,
         default=[],
         description="Prompts used with LLM service.",
@@ -68,8 +74,8 @@ class AgentlessAgentConfig(BaseModel):
         default="azure:gpt-4o-mini",
         description="Default arguments to LLM completion function by configured model.",
     )
-    default_model_settings: dict[str, AgentModelSettings] = Field(
-        default={"azure:gpt-4o-mini": AgentModelSettings(seed=42, temperature=0.8)},
+    default_model_settings: dict[str, AgentlessModelSettings] = Field(
+        default={"azure:gpt-4o-mini": AgentlessModelSettings(seed=42, temperature=0.8)},
         description="Default LLM configuration to use.",
     )
 
@@ -82,12 +88,12 @@ class AgentlessAgentConfig(BaseModel):
         # Fill out defaults to eliminate need for checking.
         for model_name in self.models.keys():
             if model_name not in self.default_model_settings:
-                self.default_model_settings[model_name] = AgentModelSettings()
+                self.default_model_settings[model_name] = AgentlessModelSettings()
 
         return self
 
 class AgentlessRunConfig(BaseModel):
-    model_settings: Optional[AgentModelSettings] = Field(
+    model_settings: Optional[AgentlessModelSettings] = Field(
         default=None,
         description="Specific arguments for LLM transformation.",
     )
@@ -101,7 +107,14 @@ class AgentlessRunInput(BaseModel):
         default={},
         description="Context used for message template rendering.",
     )
-    message_templates: List[Dict[str,str]] = Field(
+    message_templates: List[AgentlessMessage] = Field(
+        max_length=4096,
+        default=[],
+        description="Prompts used with LLM service.",
+    )
+
+class AgentlessRunOuput(BaseModel):
+    messages: List[AgentlessMessage] = Field(
         max_length=4096,
         default=[],
         description="Prompts used with LLM service.",
@@ -109,7 +122,7 @@ class AgentlessRunInput(BaseModel):
 
 def get_supported_agent(
     model_name: SupportedModelName,
-    model_args: dict[str, Any] = {},
+    model_args: Dict[str, Any] = {},
     **kwargs,
 ) -> Agent:
     """
@@ -137,20 +150,25 @@ def get_supported_agent(
 
     return Agent(model_name, **kwargs)
 
-class Agentless(BaseAgent):
+class Agentless():
     def __init__(self, config: AgentlessAgentConfig):
         self.agent_config = config
-        super().__init__()
+        self.jinja_env_async = SandboxedEnvironment(
+            loader=None,
+            enable_async=True,
+            autoescape=False,
+        )
     
-    async def astream(self, run: Run) -> AsyncGenerator[Message, None]:
+    async def ainvoke(self, input: AgentlessRunInput, config: AgentlessRunConfig) -> AgentlessRunOuput:
+        # Concat agent-wide message prefix with supplied template
+        # and render with supplied context
+        llm_messages = self.agent_config.message_templates + input.message_templates
+        llm_messages_json = json.dumps(llm_messages)
+        msgs_template = self.jinja_env_async.from_string(llm_messages_json)
+        rendered_msgs = msgs_template.render(input.context)
+        final_msgs = json.loads(rendered_msgs)
 
-        input: AgentlessRunInput = run.input
-        config: AgentlessRunConfig = run.config
-
-        if self.pyai_agent is None:
-            raise ValueError("config not set")
-            
-        user_prompt, message_history = self._convert_prompts(input.messages)
+        user_prompt, message_history = self._convert_prompts(final_msgs)
 
         agent = self._get_agent(config)
         response = await agent.run(
@@ -158,7 +176,12 @@ class Agentless(BaseAgent):
             model_settings=self._get_model_settings(config),
             message_history=message_history,
         )
-        return response.data
+
+        return_msgs = AgentlessMessageList.model_validate(final_msgs)
+        return_msgs.append(
+            AgentlessMessage(role="assistant", content=response.data)
+        )
+        return return_msgs
 
     
     def _get_model_settings(self, config: AgentlessRunConfig):
@@ -194,23 +217,21 @@ class Agentless(BaseAgent):
         )
 
     def _convert_prompts(
-        self, messages: list[dict[str, str]]
-    ) -> tuple[str, list[ModelMessage]]:
+        self, messages: List[AgentlessMessage]
+    ) -> Tuple[str, List[ModelMessage]]:
         user_prompt = ""
         message_history = []
 
         for msg in messages:
-            role = msg.get("role", "user")
-
-            if role.lower() == "user":
-                user_prompt = msg.get("content", "")
+            if msg.role == "user":
+                user_prompt = msg.content
                 message_history.append(
                     ModelRequest(parts=[UserPromptPart(content=user_prompt)])
                 )
-            elif role.lower() == "assistant":
-                content = msg.get("content", "")
+            elif msg.role == "assistant":
+                content = msg.content
                 message_history.append(ModelResponse(parts=[TextPart(content=content)]))
-            else:
-                logger.warning("ignoring unknown message type: {role}")
+            elif msg.role == "system":
+                logger.error("ignoring user supplied system message type")
 
         return (user_prompt, message_history)
