@@ -170,8 +170,8 @@ class Agentless:
     ) -> AgentlessRunOutput:
         # Concat agent-wide message prefix with supplied template
         # and render with supplied context
-        llm_messages = self.agent_config.message_templates + input.message_templates
-        llm_messages_json = json.dumps(llm_messages)
+        llm_messages = AgentlessMessageList.model_construct(self.agent_config.message_templates + input.message_templates)
+        llm_messages_json = llm_messages.model_dump_json()
         msgs_template = self.jinja_env_async.from_string(llm_messages_json)
         rendered_msgs = await msgs_template.render_async(input.context)
         final_msgs = json.loads(rendered_msgs)
