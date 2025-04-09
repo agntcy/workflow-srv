@@ -1,14 +1,12 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
-import logging
 import json
-from typing import Optional, List, Dict, Union, Literal, Any, Tuple
-from pydantic import Field
-from typing_extensions import TypedDict
-from jinja2.sandbox import SandboxedEnvironment
+import logging
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
+from jinja2.sandbox import SandboxedEnvironment
 from openai import AsyncAzureOpenAI
-from pydantic import Field, model_validator, BaseModel, RootModel
+from pydantic import BaseModel, Field, RootModel, model_validator
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
     ModelMessage,
@@ -19,7 +17,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import KnownModelName
 from pydantic_ai.models.openai import OpenAIModel
-
+from typing_extensions import TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +29,7 @@ SupportedModelName = Union[
         "azure:gpt-4",
     ],
 ]
+
 
 class AgentlessModelArgs(TypedDict, total=False):
     base_url: str
@@ -54,11 +53,13 @@ class AgentlessModelSettings(TypedDict, total=False):
 
 class AgentlessMessage(BaseModel):
     role: Literal["user", "system", "assistant"] = Field(
-        default = "user",
+        default="user",
     )
     content: str
 
+
 type AgentlessMessageList = RootModel[List[AgentlessMessage]]
+
 
 class AgentlessAgentConfig(BaseModel):
     models: dict[str, AgentlessModelArgs] = Field(
@@ -92,6 +93,7 @@ class AgentlessAgentConfig(BaseModel):
 
         return self
 
+
 class AgentlessRunConfig(BaseModel):
     model_settings: Optional[AgentlessModelSettings] = Field(
         default=None,
@@ -102,8 +104,9 @@ class AgentlessRunConfig(BaseModel):
         description="Specific model out of those configured to handle request.",
     )
 
+
 class AgentlessRunInput(BaseModel):
-    context: Dict[str,str] = Field(
+    context: Dict[str, str] = Field(
         default={},
         description="Context used for message template rendering.",
     )
@@ -113,12 +116,14 @@ class AgentlessRunInput(BaseModel):
         description="Prompts used with LLM service.",
     )
 
+
 class AgentlessRunOutput(BaseModel):
     messages: List[AgentlessMessage] = Field(
         max_length=4096,
         default=[],
         description="Prompts used with LLM service.",
     )
+
 
 def get_supported_agent(
     model_name: SupportedModelName,
@@ -150,7 +155,8 @@ def get_supported_agent(
 
     return Agent(model_name, **kwargs)
 
-class Agentless():
+
+class Agentless:
     def __init__(self, config: AgentlessAgentConfig):
         self.agent_config = config
         self.jinja_env_async = SandboxedEnvironment(
@@ -158,8 +164,10 @@ class Agentless():
             enable_async=True,
             autoescape=False,
         )
-    
-    async def ainvoke(self, input: AgentlessRunInput, config: AgentlessRunConfig) -> AgentlessRunOutput:
+
+    async def ainvoke(
+        self, input: AgentlessRunInput, config: AgentlessRunConfig
+    ) -> AgentlessRunOutput:
         # Concat agent-wide message prefix with supplied template
         # and render with supplied context
         llm_messages = self.agent_config.message_templates + input.message_templates
@@ -178,12 +186,9 @@ class Agentless():
         )
 
         return_msgs = AgentlessMessageList.model_validate(final_msgs)
-        return_msgs.append(
-            AgentlessMessage(role="assistant", content=response.data)
-        )
+        return_msgs.append(AgentlessMessage(role="assistant", content=response.data))
         return return_msgs
 
-    
     def _get_model_settings(self, config: AgentlessRunConfig):
         if hasattr(config, "model") and config.model is not None:
             model_name = config.model
@@ -199,9 +204,7 @@ class Agentless():
         else:
             return self.config.default_model_settings[model_name]
 
-    def _get_agent(
-        self, config: AgentlessRunConfig
-    ) -> Agent:
+    def _get_agent(self, config: AgentlessRunConfig) -> Agent:
         if hasattr(config, "model") and config.model is not None:
             model_name = config.model
         else:
