@@ -1,5 +1,7 @@
 # Agentless code here
 
+from pydantic import BaseModel
+
 
 class Agentless:
     async def astream(self, input, config): ...
@@ -7,4 +9,5 @@ class Agentless:
     # Placeholder for the actual implementation
 
 
-agentless = Agentless()
+class AgentlessConfig(BaseModel):
+    system_prompt: str

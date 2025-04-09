@@ -9,16 +9,23 @@ from agent_workflow_server.services.message import Message
 from agent_workflow_server.storage.models import Run
 
 
+class DummyAgentless: ...
+
+
+dummyagent = DummyAgentless()
+
+
 class AgentlessAdapter(BaseAdapter):
-    def load_agent(self, agent: object) -> Optional[BaseAgent]:
-        if isinstance(agent, Agentless):
-            return AgentlessAgent(agent)
+    def load_agent(self, agent: object, manifest: dict) -> Optional[BaseAgent]:
+        if isinstance(agent, DummyAgentless):
+            return AgentlessAgent(manifest)
         return None
 
 
 class AgentlessAgent(BaseAgent):
-    def __init__(self, agent: Agentless):
-        self.agent = agent
+    def __init__(self, manifest: dict):
+        self.agent = Agentless(manifest["deployment"])
+        print("Agentless agent loaded with manifest:", manifest)
 
     async def astream(self, run: Run):
         async for event in self.agent.astream(input=run["input"], config=run["config"]):

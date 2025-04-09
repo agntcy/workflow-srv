@@ -18,6 +18,6 @@ class BaseAgent(ABC):
 
 class BaseAdapter(ABC):
     @abstractmethod
-    def load_agent(self, agent: Any) -> Optional[BaseAgent]:
+    def load_agent(self, agent: Any, manifest: dict = None) -> Optional[BaseAgent]:
         """Checks the type of the agent and if it is supported, returns an instance of the agent."""
         pass
