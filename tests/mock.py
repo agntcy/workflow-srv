@@ -43,7 +43,7 @@ class MockAgent(BaseAgent):
 
 
 class MockAdapter(BaseAdapter):
-    def load_agent(self, agent: object):
+    def load_agent(self, agent: object, manifest: dict):
         if isinstance(agent, MockAgentImpl):
             return MockAgent(agent)
 

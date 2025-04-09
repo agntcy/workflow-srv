@@ -56,7 +56,7 @@ async def get_acp_descriptor_by_id(
 
     try:
         agent_info = get_agent_info(agent_id)
-        return agent_info.manifest
+        return agent_info.acp_descriptor
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
