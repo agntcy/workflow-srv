@@ -1,6 +1,6 @@
-# Email Reviewer (LlamaIndex)
+# Email Reviewer (Agentless)
 
-A simple agent written in LlamaIndex (using a `Workflow`) in charge of reviewing and correcting an email
+A simple agent written using Agentless platform provided by the server.
 
 ## Agent Input
 - `email`: (str) Email to review
@@ -10,23 +10,22 @@ A simple agent written in LlamaIndex (using a `Workflow`) in charge of reviewing
 - `correct`: (bool) If given email does not contain writing errors and it targets the audience correctly.
 - `corrected_email`: (opt, str) The corrected email
 
-## Requirements
-
- - LlamaIndex: https://docs.llamaindex.ai/en/stable/getting_started/installation/
-
 ## Agent local deployment
 
-1) Copy and adapt `.env`: `cp .env.example .env`
-1) Install llama-deploy: `pip install llama_deploy`
-1) Run apiserver:
-    - `python -m llama_deploy.apiserver`
-    OR
-    - (docker): `docker run -p 4501:4501 -v .:/opt/quickstart -w /opt/quickstart llamaindex/llama-deploy:main`
-1) Create deployment config from template: `sed "s|\${PWD}|$(pwd)|g" "email_reviewer.tmpl.yaml" > "email_reviewer.yaml"`
-1) Deploy the workflow: `llamactl deploy email_reviewer.yaml`
+Set up the environment for the workflow server. You can create the `.env` file
+where the workflow server is executed. It will also need credentials for 
+whichever LLM you use in the Agentless platform.
+
+```
+AGENT_MANIFEST_PATH=examples/email_reviewer_agentless/deploy/email_reviewer_agentless.json
+AGENTS_REF='{"3f1e2549-5799-4321-91ae-2a4881d55526": "agent_workflow_server.agents.adapters.agentless:dummyagent"}'
+AZURE_OPENAI_API_KEY=blah-blah-blah
+AZURE_OPENAI_ENDPOINT=blah-blah-blah
+OPENAI_API_VERSION=2024-07-01-preview
+```
+
+Deploy the workflow (from the top-level of the repo): `python run server`
 
 ## Test agent
 
-You can use `usage_example.py` to use the Llama Client SDK to call the agent with given inputs (see source code):
-`python usage_example.py `
-
+Point your browser at the [workflow server after running the agent](http://127.0.0.1:8000/agents/3f1e2549-5799-4321-91ae-2a4881d55526/docs#/Stateless%20Runs/create_and_wait_for_stateless_run_output)
