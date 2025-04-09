@@ -58,7 +58,7 @@ class AgentlessMessage(BaseModel):
     content: str
 
 
-type AgentlessMessageList = RootModel[List[AgentlessMessage]]
+AgentlessMessageList = RootModel[List[AgentlessMessage]]
 
 
 class AgentlessAgentConfig(BaseModel):
