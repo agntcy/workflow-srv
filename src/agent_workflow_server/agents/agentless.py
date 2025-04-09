@@ -173,8 +173,9 @@ class Agentless:
         llm_messages = self.agent_config.message_templates + input.message_templates
         llm_messages_json = json.dumps(llm_messages)
         msgs_template = self.jinja_env_async.from_string(llm_messages_json)
-        rendered_msgs = msgs_template.render(input.context)
+        rendered_msgs = await msgs_template.render_async(input.context)
         final_msgs = json.loads(rendered_msgs)
+        logger.debug("agentless agent rendered messages: {rendered_msgs}")
 
         user_prompt, message_history = self._convert_prompts(final_msgs)
 
@@ -187,6 +188,8 @@ class Agentless:
 
         return_msgs = AgentlessMessageList.model_validate(final_msgs)
         return_msgs.append(AgentlessMessage(role="assistant", content=response.data))
+
+        logger.debug(f"agentless agent return messages: {return_msgs.model_dump_json()}")
         return return_msgs
 
     def _get_model_settings(self, config: AgentlessRunConfig):
