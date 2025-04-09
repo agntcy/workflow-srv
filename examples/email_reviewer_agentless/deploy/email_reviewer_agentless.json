@@ -1,0 +1,228 @@
+{
+  "metadata": {
+    "ref": {
+      "name": "org.agntcy.mail_reviewer_agentless",
+      "version": "0.0.1",
+      "url": null
+    },
+    "description": "Review emails"
+  },
+  "specs": {
+    "capabilities": {
+      "threads": false,
+      "interrupts": false,
+      "callbacks": false,
+      "streaming": null
+    },
+    "input": {
+      "$defs": {
+        "AgentlessMessage": {
+          "properties": {
+            "role": {
+              "default": "user",
+              "enum": [
+                "user",
+                "system",
+                "assistant"
+              ],
+              "title": "Role",
+              "type": "string"
+            },
+            "content": {
+              "title": "Content",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content"
+          ],
+          "title": "AgentlessMessage",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "context": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Context used for message template rendering.",
+          "title": "Context",
+          "type": "object"
+        },
+        "message_templates": {
+          "default": [],
+          "description": "Prompts used with LLM service.",
+          "items": {
+            "$ref": "#/$defs/AgentlessMessage"
+          },
+          "maxItems": 4096,
+          "title": "Message Templates",
+          "type": "array"
+        }
+      },
+      "title": "AgentlessRunInput",
+      "type": "object"
+    },
+    "output": {
+      "$defs": {
+        "AgentlessMessage": {
+          "properties": {
+            "role": {
+              "default": "user",
+              "enum": [
+                "user",
+                "system",
+                "assistant"
+              ],
+              "title": "Role",
+              "type": "string"
+            },
+            "content": {
+              "title": "Content",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content"
+          ],
+          "title": "AgentlessMessage",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "messages": {
+          "default": [],
+          "description": "Prompts used with LLM service.",
+          "items": {
+            "$ref": "#/$defs/AgentlessMessage"
+          },
+          "maxItems": 4096,
+          "title": "Messages",
+          "type": "array"
+        }
+      },
+      "title": "AgentlessRunOutput",
+      "type": "object"
+    },
+    "custom_streaming_update": null,
+    "thread_state": null,
+    "config": {
+      "$defs": {
+        "AgentlessModelSettings": {
+          "properties": {
+            "max_tokens": {
+              "title": "Max Tokens",
+              "type": "integer"
+            },
+            "temperature": {
+              "title": "Temperature",
+              "type": "number"
+            },
+            "top_p": {
+              "title": "Top P",
+              "type": "number"
+            },
+            "parallel_tool_calls": {
+              "title": "Parallel Tool Calls",
+              "type": "boolean"
+            },
+            "seed": {
+              "title": "Seed",
+              "type": "integer"
+            },
+            "presence_penalty": {
+              "title": "Presence Penalty",
+              "type": "number"
+            },
+            "frequency_penalty": {
+              "title": "Frequency Penalty",
+              "type": "number"
+            },
+            "logit_bias": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "title": "Logit Bias",
+              "type": "object"
+            }
+          },
+          "title": "AgentlessModelSettings",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "model_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentlessModelSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Specific arguments for LLM transformation."
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Specific model out of those configured to handle request.",
+          "title": "Model"
+        }
+      },
+      "title": "AgentlessRunConfig",
+      "type": "object"
+    },
+    "interrupts": null
+  },
+  "deployment": {
+    "deployment_options": [
+      {
+        "type": "source_code",
+        "name": "source_code_local",
+        "framework_config": {
+          "framework_type": "agentless",
+          "config": {
+            "models": {
+              "azure:gpt-4o-mini": {}
+            },
+            "message_templates": [
+              {
+                "role": "system",
+                "content": "You are an email reviewer assistant, in charge of reviewing an email"
+              },
+              {
+                "role": "system",
+                "content": "Your tasks are:\n1) Check whether the provided email has no writing errors\n2) Check whether the provided email matches the target audience\n3) If the email has writing errors or does not match the target audience below, correct the email.\n\nThe target audience:\n{{target_audience}}\n\nThe email:\n{{email}}\n"
+              }
+            ],
+            "default_model": "azure:gpt-4o-mini",
+            "default_model_settings": {
+              "azure:gpt-4o-mini": {
+                "seed": 42,
+                "temperature": 0.8
+              }
+            }
+          }
+        }
+      }
+    ],
+    "env_vars": [
+      {
+        "desc": "Azure key for the OpenAI service",
+        "name": "AZURE_OPENAI_API_KEY",
+        "required": null,
+        "defaultValue": null
+      }
+    ],
+    "dependencies": []
+  }
+}
