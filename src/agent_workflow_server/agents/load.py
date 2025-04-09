@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 class AgentInfo(NamedTuple):
     agent: BaseAgent
-    manifest: AgentACPDescriptor
+    acp_descriptor: AgentACPDescriptor
+    manifest: dict
     schema: Mapping[Hashable, Any]
 
 
@@ -56,7 +57,7 @@ AGENTS: Dict[str, AgentInfo] = {}
 ADAPTERS = _load_adapters()
 
 
-def _read_manifest(path: str) -> AgentACPDescriptor:
+def _read_manifest(path: str):
     if os.path.isfile(path):
         with open(path, "r") as file:
             try:
@@ -67,7 +68,8 @@ def _read_manifest(path: str) -> AgentACPDescriptor:
                 )
             # print full path
             logger.info(f"Loaded Agent Manifest from {os.path.abspath(path)}")
-        return AgentACPDescriptor(**manifest_data)
+        return AgentACPDescriptor(**manifest_data), manifest_data
+    return None, None
 
 
 def _resolve_agent(name: str, path: str) -> AgentInfo:
@@ -105,13 +107,37 @@ Check that file path in 'AGENTS_REF' env variable is correct."""
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+    ###
+
+    # Load manifest. Check in paths below (in order)
+    manifest_paths = [
+        os.path.join(os.path.dirname(module.__file__), "manifest.json"),
+        os.environ.get("AGENT_MANIFEST_PATH", "manifest.json") or "manifest.json",
+    ]
+
+    for manifest_path in manifest_paths:
+        acp_descriptor, manifest = _read_manifest(manifest_path)
+        if acp_descriptor and manifest:
+            break
+    else:
+        raise ImportError(
+            f"Failed to load agent manifest from any of the paths: {manifest_paths}"
+        )
+
+    try:
+        schema = generate_agent_oapi(acp_descriptor, name)
+    except Exception as e:
+        raise ImportError("Failed to generate OAPI schema:", e)
+
+    ###
+
     # Check if the variable exists in the module
     if hasattr(module, export_symbol):
         resolved = getattr(module, export_symbol)
 
         agent = None
         for adapter in ADAPTERS:
-            agent = adapter.load_agent(resolved)
+            agent = adapter.load_agent(resolved, manifest)
             if agent is not None:
                 break
         else:
@@ -124,35 +150,15 @@ Check that file path in 'AGENTS_REF' env variable is correct."""
 Check that the module name and export symbol in 'AGENTS_REF' env variable are correct."""
         )
 
-    # Load manifest. Check in paths below (in order)
-    manifest_paths = [
-        os.path.join(os.path.dirname(module.__file__), "manifest.json"),
-        os.environ.get("AGENT_MANIFEST_PATH", "manifest.json") or "manifest.json",
-    ]
-
-    for manifest_path in manifest_paths:
-        manifest = _read_manifest(manifest_path)
-        if manifest:
-            break
-    else:
-        raise ImportError(
-            f"Failed to load agent manifest from any of the paths: {manifest_paths}"
-        )
-
-    try:
-        schema = generate_agent_oapi(manifest, name)
-    except Exception as e:
-        raise ImportError("Failed to generate OAPI schema:", e)
-
     logger.info(f"Loaded Agent from {module.__file__}")
     logger.info(f"Agent Type: {type(agent).__name__}")
 
-    return AgentInfo(agent=agent, manifest=manifest, schema=schema)
+    return AgentInfo(
+        agent=agent, acp_descriptor=acp_descriptor, manifest=manifest, schema=schema
+    )
 
 
 def load_agents():
-    # Simulate loading the config from environment variable
-
     try:
         config: Dict[str, str] = json.loads(os.getenv("AGENTS_REF", {}))
     except json.JSONDecodeError:
@@ -180,14 +186,14 @@ def get_agent(agent_id: str) -> Agent:
     if agent_id not in AGENTS:
         raise ValueError(f'Agent "{agent_id}" not found')
 
-    return Agent(agent_id=agent_id, metadata=AGENTS[agent_id].manifest.metadata)
+    return Agent(agent_id=agent_id, metadata=AGENTS[agent_id].acp_descriptor.metadata)
 
 
 def get_agent_from_agent_info(agent_id: str, agent_info: AgentInfo) -> Agent:
     if agent_id not in AGENTS:
         raise ValueError(f'Agent "{agent_id}" not found')
 
-    return Agent(agent_id=agent_id, metadata=agent_info.manifest.metadata)
+    return Agent(agent_id=agent_id, metadata=agent_info.acp_descriptor.metadata)
 
 
 def search_for_agents(search_request: AgentSearchRequest) -> List[Agent]:
@@ -195,15 +201,15 @@ def search_for_agents(search_request: AgentSearchRequest) -> List[Agent]:
         raise ValueError("At least one of 'name' or 'version' must be provided")
 
     return [
-        Agent(agent_id=agent_id, metadata=agent.manifest.metadata)
+        Agent(agent_id=agent_id, metadata=agent.acp_descriptor.metadata)
         for agent_id, agent in AGENTS.items()
         if (
             not search_request.name
-            or search_request.name == agent.manifest.metadata.ref.name
+            or search_request.name == agent.acp_descriptor.metadata.ref.name
         )
         and (
             not search_request.version
-            or search_request.version == agent.manifest.metadata.ref.version
+            or search_request.version == agent.acp_descriptor.metadata.ref.version
         )
     ]
 

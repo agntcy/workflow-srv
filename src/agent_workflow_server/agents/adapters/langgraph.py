@@ -14,7 +14,7 @@ from agent_workflow_server.storage.models import Run
 
 
 class LangGraphAdapter(BaseAdapter):
-    def load_agent(self, agent: object) -> Optional[BaseAgent]:
+    def load_agent(self, agent: object, manifest: dict) -> Optional[BaseAgent]:
         if isinstance(agent, Graph):
             return LangGraphAgent(agent.compile())
         elif isinstance(agent, CompiledGraph):

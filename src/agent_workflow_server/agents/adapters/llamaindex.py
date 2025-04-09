@@ -12,7 +12,7 @@ from agent_workflow_server.storage.models import Run
 
 
 class LlamaIndexAdapter(BaseAdapter):
-    def load_agent(self, agent: object) -> Optional[BaseAgent]:
+    def load_agent(self, agent: object, manifest: dict) -> Optional[BaseAgent]:
         if callable(agent) and len(inspect.signature(agent).parameters) == 0:
             result = agent()
             if isinstance(result, Workflow):

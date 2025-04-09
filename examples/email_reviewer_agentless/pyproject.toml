@@ -1,0 +1,19 @@
+[project]
+name = "email_reviewer_agentless"
+version = "0.1.0"
+description = "Helper to produce the email reviewer agentless manifest"
+authors = [
+    {name = "Alessandro Duminuco ", email = "aduminuc@cisco.com"}
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+agent-workflow-server = { path = "../../", develop=true }
+python = ">=3.12,<4"
+agntcy_acp = "v1.1.2"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
