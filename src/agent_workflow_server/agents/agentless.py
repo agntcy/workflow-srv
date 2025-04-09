@@ -1,4 +1,7 @@
-# Agentless code here
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+from typing import Optional, List, Dict
+from pydantic import Field
 
 from pydantic import BaseModel
 
