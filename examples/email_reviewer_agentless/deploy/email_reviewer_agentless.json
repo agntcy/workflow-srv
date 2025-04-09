@@ -200,7 +200,7 @@
                 "content": "You are an email reviewer assistant, in charge of reviewing an email"
               },
               {
-                "role": "system",
+                "role": "user",
                 "content": "Your tasks are:\n1) Check whether the provided email has no writing errors\n2) Check whether the provided email matches the target audience\n3) If the email has writing errors or does not match the target audience below, correct the email.\n\nThe target audience:\n{{target_audience}}\n\nThe email:\n{{email}}\n"
               }
             ],

@@ -17,6 +17,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import KnownModelName
 from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from typing_extensions import TypedDict
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,11 @@ class AgentlessAgentConfig(BaseModel):
         for model_name in self.models.keys():
             if model_name not in self.default_model_settings:
                 self.default_model_settings[model_name] = AgentlessModelSettings()
+        
+        if not any(filter(lambda msg: msg.role == "system", self.message_templates)):
+            logger.warning(
+                "no system message specified in agent config message templates"
+            )
 
         return self
 
@@ -150,7 +156,10 @@ def get_supported_agent(
     """
     if model_name.startswith("azure:"):
         client = AsyncAzureOpenAI(**model_args)
-        model = OpenAIModel(model_name[6:], openai_client=client)
+        model = OpenAIModel(
+            model_name[6:], 
+            provider=OpenAIProvider(openai_client=client),
+        )
         return Agent(model, **kwargs)
 
     return Agent(model_name, **kwargs)
@@ -185,27 +194,27 @@ class Agentless:
             model_settings=self._get_model_settings(config),
             message_history=message_history,
         )
+        logger.debug(f"llm response: {response}")
 
-        return_msgs = AgentlessMessageList.model_validate(final_msgs)
-        return_msgs.append(AgentlessMessage(role="assistant", content=response.data))
-
-        logger.debug(f"agentless agent return messages: {return_msgs.model_dump_json()}")
-        return return_msgs
+        final_msgs.append({"role": "assistant", "content": response.data})
+        run_output = AgentlessRunOutput.model_validate({"messages": final_msgs})
+        logger.debug(f"agentless agent return messages: {run_output.model_dump_json()}")
+        return run_output
 
     def _get_model_settings(self, config: AgentlessRunConfig):
         if hasattr(config, "model") and config.model is not None:
             model_name = config.model
         else:
-            model_name = self.config.default_model
+            model_name = self.agent_config.default_model
 
-        if model_name not in self.config.models:
+        if model_name not in self.agent_config.models:
             raise ValueError(f"requested model {model_name} not found")
         elif hasattr(config, "model_settings") and config.model_settings is not None:
-            model_settings = self.config.default_model_settings[model_name].copy()
+            model_settings = self.agent_config.default_model_settings[model_name].copy()
             model_settings.update(config.model_settings)
             return model_settings
         else:
-            return self.config.default_model_settings[model_name]
+            return self.agent_config.default_model_settings[model_name]
 
     def _get_agent(self, config: AgentlessRunConfig) -> Agent:
         if hasattr(config, "model") and config.model is not None:
@@ -216,28 +225,36 @@ class Agentless:
         if model_name not in self.agent_config.models:
             raise ValueError(f"requested model {model_name} not found")
 
+        system_prompts = [
+            msg
+            for msg in self.agent_config.message_templates
+            if msg.role == "system"
+        ]
+
         return get_supported_agent(
             model_name,
             model_args=self.agent_config.models[model_name],
-            system_prompt=self.agent_config.system_prompt,
+            system_prompt=system_prompts[-1] if len(system_prompts) > 0 else None,
         )
 
     def _convert_prompts(
-        self, messages: List[AgentlessMessage]
+        self, messages: List[Dict[str,str]]
     ) -> Tuple[str, List[ModelMessage]]:
         user_prompt = ""
         message_history = []
 
         for msg in messages:
-            if msg.role == "user":
-                user_prompt = msg.content
+            role = msg.get("role", "user")
+
+            if role.lower() == "user":
+                user_prompt = msg.get("content", "")
                 message_history.append(
                     ModelRequest(parts=[UserPromptPart(content=user_prompt)])
                 )
-            elif msg.role == "assistant":
+            elif role.lower() == "assistant":
                 content = msg.content
                 message_history.append(ModelResponse(parts=[TextPart(content=content)]))
-            elif msg.role == "system":
-                logger.error("ignoring user supplied system message type")
+            elif role.lower() == "system":
+                logger.warning("ignoring user supplied system message type")
 
         return (user_prompt, message_history)
