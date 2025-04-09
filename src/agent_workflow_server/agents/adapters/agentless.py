@@ -3,7 +3,7 @@
 
 from typing import Optional
 
-from agent_workflow_server.agents.agentless.Agentless import Agentless
+from agent_workflow_server.agents.agentless import Agentless
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.storage.models import Run
