@@ -1,8 +1,9 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 import logging
-from typing import Optional, List, Dict, Union, Literal, Any
+from typing import Optional, List, Dict, Union, Literal, Any, AsyncGenerator
 from pydantic import Field
+from typing_extensions import TypedDict
 
 from openai import AsyncAzureOpenAI
 from pydantic import Field, model_validator, BaseModel
@@ -17,6 +18,8 @@ from pydantic_ai.messages import (
 from pydantic_ai.models import KnownModelName
 from pydantic_ai.models.openai import OpenAIModel
 
+from agent_workflow_server.services.message import Message
+from agent_workflow_server.storage.models import Run
 from .base import BaseAgent
 
 
@@ -31,7 +34,7 @@ SupportedModelName = Union[
     ],
 ]
 
-class AgentIOModelArgs(BaseModel):
+class AgentIOModelArgs(TypedDict, total=False):
     base_url: str
     api_version: str
     azure_endpoint: str
@@ -40,7 +43,7 @@ class AgentIOModelArgs(BaseModel):
     organization: str
 
 
-class AgentModelSettings(BaseModel):
+class AgentModelSettings(TypedDict, total=False):
     max_tokens: int
     temperature: float
     top_p: float
@@ -56,9 +59,10 @@ class AgentlessAgentConfig(BaseModel):
         default={"azure:gpt-4o-mini": AgentIOModelArgs()},
         description="LLM configuration to use.",
     )
-    system_prompt: str = Field(
+    message_templates: List[Dict[str,str]] = Field(
         max_length=4096,
-        description="System prompt used with LLM service.",
+        default=[],
+        description="Prompts used with LLM service.",
     )
     default_model: Optional[str] = Field(
         default="azure:gpt-4o-mini",
@@ -82,6 +86,26 @@ class AgentlessAgentConfig(BaseModel):
 
         return self
 
+class AgentlessRunConfig(BaseModel):
+    model_settings: Optional[AgentModelSettings] = Field(
+        default=None,
+        description="Specific arguments for LLM transformation.",
+    )
+    model: Optional[str] = Field(
+        default=None,
+        description="Specific model out of those configured to handle request.",
+    )
+
+class AgentlessRunInput(BaseModel):
+    context: Dict[str,str] = Field(
+        default={},
+        description="Context used for message template rendering.",
+    )
+    message_templates: List[Dict[str,str]] = Field(
+        max_length=4096,
+        default=[],
+        description="Prompts used with LLM service.",
+    )
 
 def get_supported_agent(
     model_name: SupportedModelName,
@@ -113,18 +137,16 @@ def get_supported_agent(
 
     return Agent(model_name, **kwargs)
 
-class Agentless:
-    def __init__(self, manifest):
-        self.manifest = manifest
-
-    async def astream(self, input, config): ...
-
 class Agentless(BaseAgent):
     def __init__(self, config: AgentlessAgentConfig):
         self.agent_config = config
         super().__init__()
     
-    async def astream(self, input: AgentlessInput, config: AgentlessConfig):
+    async def astream(self, run: Run) -> AsyncGenerator[Message, None]:
+
+        input: AgentlessRunInput = run.input
+        config: AgentlessRunConfig = run.config
+
         if self.pyai_agent is None:
             raise ValueError("config not set")
             
@@ -139,7 +161,7 @@ class Agentless(BaseAgent):
         return response.data
 
     
-    def _get_model_settings(self, config: AgentlessConfig):
+    def _get_model_settings(self, config: AgentlessRunConfig):
         if hasattr(config, "model") and config.model is not None:
             model_name = config.model
         else:
@@ -155,7 +177,7 @@ class Agentless(BaseAgent):
             return self.config.default_model_settings[model_name]
 
     def _get_agent(
-        self, config: AgentlessConfig
+        self, config: AgentlessRunConfig
     ) -> Agent:
         if hasattr(config, "model") and config.model is not None:
             model_name = config.model
