@@ -45,5 +45,5 @@ class AgentlessAgent(BaseAgent):
         )
         yield Message(
             type="message",
-            data=resp.messages,
+            data=resp,
         )
