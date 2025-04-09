@@ -113,7 +113,7 @@ class AgentlessRunInput(BaseModel):
         description="Prompts used with LLM service.",
     )
 
-class AgentlessRunOuput(BaseModel):
+class AgentlessRunOutput(BaseModel):
     messages: List[AgentlessMessage] = Field(
         max_length=4096,
         default=[],
@@ -159,7 +159,7 @@ class Agentless():
             autoescape=False,
         )
     
-    async def ainvoke(self, input: AgentlessRunInput, config: AgentlessRunConfig) -> AgentlessRunOuput:
+    async def ainvoke(self, input: AgentlessRunInput, config: AgentlessRunConfig) -> AgentlessRunOutput:
         # Concat agent-wide message prefix with supplied template
         # and render with supplied context
         llm_messages = self.agent_config.message_templates + input.message_templates
