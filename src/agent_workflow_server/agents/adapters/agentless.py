@@ -32,12 +32,16 @@ class AgentlessAdapter(BaseAdapter):
 
 class AgentlessAgent(BaseAgent):
     def __init__(self, manifest: dict):
-        self.agent = Agentless(config=AgentlessAgentConfig.model_validate(manifest))
+        config = manifest["deployment"]["deployment_options"][0]["framework_config"][
+            "config"
+        ]
+        self.agent = Agentless(config=AgentlessAgentConfig.model_validate(config))
         logger.debug("Agentless agent loaded with manifest %s", manifest)
 
     async def astream(self, run: Run):
         resp = await self.agent.ainvoke(
-            input=AgentlessRunInput(run.input), config=AgentlessRunConfig(run.config)
+            input=AgentlessRunInput.model_validate(run["input"]),
+            config=AgentlessRunConfig.model_validate(run["config"]),
         )
         yield Message(
             type="message",
