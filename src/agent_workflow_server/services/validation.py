@@ -34,6 +34,8 @@ def validate_against_schema(
 def get_agent_schemas(agent_id: str):
     """Get input, output and config schemas for an agent"""
     agent_info = AGENTS.get(agent_id)
+    if not agent_info:
+        raise ValueError(f"Agent {agent_id} not found")
 
     specs = agent_info.manifest.specs
     return {"input": specs.input, "output": specs.output, "config": specs.config}
@@ -45,7 +47,7 @@ def validate_output(run_id, agent_id: str, output: Any) -> None:
 
         validate_against_schema(
             instance=output,
-            schema=schemas["output"].get("properties", schemas["output"]),
+            schema=schemas["output"],
             error_prefix=f"Output validation failed for run {run_id}",
         )
 

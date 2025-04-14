@@ -59,24 +59,40 @@ ADAPTERS = _load_adapters()
 def _read_manifest(path: str) -> AgentACPDescriptor:
     if os.path.isfile(path):
         with open(path, "r") as file:
-            manifest_data = json.load(file)
+            try:
+                manifest_data = json.load(file)
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Invalid JSON format in manifest file: {path}. Error: {e}"
+                )
             # print full path
             logger.info(f"Loaded Agent Manifest from {os.path.abspath(path)}")
         return AgentACPDescriptor(**manifest_data)
 
 
 def _resolve_agent(name: str, path: str) -> AgentInfo:
+    if ":" not in path:
+        raise ValueError(
+            f"""Invalid format for AGENTS_REF environment variable. \
+Value must be a module:var pair. \
+Example: "agent1_module:agent1_var" or "path/to/file.py:agent1_var"
+Got: {path}"""
+        )
+
     module_or_file, export_symbol = path.split(":", 1)
     if not os.path.isfile(module_or_file):
         # It's a module (name), try to import it
         module_name = module_or_file
         try:
             module = importlib.import_module(module_name)
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError(
-                f"""Failed to load agent module {module_name}. \
-Check if it\'s installed and that module name in 'AGENTS_REF' env variable is correct."""
-            )
+        except ImportError as e:
+            if any(part in str(e) for part in module_name.split(".")):
+                raise ImportError(
+                    f"""Failed to load agent module {module_name}. \
+Check that it is installed and that the module name in 'AGENTS_REF' env variable is correct."""
+                ) from e
+            else:
+                raise e
     else:
         # It's a path to a file, try to load it as a module
         file = module_or_file
@@ -119,7 +135,9 @@ Check that the module name and export symbol in 'AGENTS_REF' env variable are co
         if manifest:
             break
     else:
-        raise ImportError("Failed to load agent manifest")
+        raise ImportError(
+            f"Failed to load agent manifest from any of the paths: {manifest_paths}"
+        )
 
     try:
         schema = generate_agent_oapi(manifest, name)
@@ -172,7 +190,7 @@ def get_agent_from_agent_info(agent_id: str, agent_info: AgentInfo) -> Agent:
     return Agent(agent_id=agent_id, metadata=agent_info.manifest.metadata)
 
 
-def search_agents(search_request: AgentSearchRequest) -> List[Agent]:
+def search_for_agents(search_request: AgentSearchRequest) -> List[Agent]:
     if not search_request.name and not search_request.version:
         raise ValueError("At least one of 'name' or 'version' must be provided")
 

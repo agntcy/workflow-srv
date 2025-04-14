@@ -10,9 +10,7 @@ from .runs import Message
 
 
 async def stream_run(run: Run) -> AsyncGenerator[Message, None]:
-    agent = get_agent_info(run["agent_id"]).agent
-    async for event in agent.astream(input=run["input"], config=run["config"]):
-        yield Message(
-            topic="message",
-            data=event,
-        )
+    agent_info = get_agent_info(run["agent_id"])
+    agent = agent_info.agent
+    async for message in agent.astream(run=run):
+        yield message

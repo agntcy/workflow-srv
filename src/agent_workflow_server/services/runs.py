@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from itertools import islice
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
 from agent_workflow_server.generated.models.run_create_stateless import (
@@ -122,6 +122,7 @@ class Runs:
         new_run = _make_run(run_create)
         run_info = RunInfo(
             run_id=new_run["run_id"],
+            queued_at=datetime.now(),
             attempts=0,
         )
         DB.create_run(new_run)
@@ -149,7 +150,7 @@ class Runs:
         return [_to_api_model(run) for run in db_runs]
 
     @staticmethod
-    def search(search_request: RunSearchRequest) -> List[ApiRun]:
+    def search_for_runs(search_request: RunSearchRequest) -> List[ApiRun]:
         filters = {}
         if search_request.agent_id:
             filters["agent_id"] = search_request.agent_id
@@ -171,6 +172,26 @@ class Runs:
         return list(
             islice(islice(runs, search_request.offset, None), search_request.limit)
         )
+
+    @staticmethod
+    async def resume(run_id: str, user_input: Dict[str, Any]) -> ApiRun:
+        run = DB.get_run(run_id)
+        if run is None:
+            raise ValueError("Run not found")
+        if run["status"] != "interrupted":
+            raise ValueError("Run is not in interrupted state")
+        if run.get("interrupt") is None:
+            raise ValueError(f"No interrupt found for run {run_id}")
+
+        interrupt = run["interrupt"]
+        interrupt["user_data"] = user_input
+
+        DB.update_run(run_id, {"interrupt": interrupt})
+        DB.update_run_info(run_id, {"attempts": 0, "queued_at": datetime.now()})
+        updated = DB.update_run_status(run_id, "pending")
+
+        await RUNS_QUEUE.put(updated["run_id"])
+        return _to_api_model(updated)
 
     @staticmethod
     async def set_status(run_id: str, status: RunStatus):

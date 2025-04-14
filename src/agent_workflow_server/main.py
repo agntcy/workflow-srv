@@ -12,6 +12,7 @@ import uvicorn.logging
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI
 
+import agent_workflow_server.logging.logger  # noqa: F401
 from agent_workflow_server.agents.load import load_agents
 from agent_workflow_server.apis.agents import public_router as PublicAgentsApiRouter
 from agent_workflow_server.apis.agents import router as AgentsApiRouter
@@ -29,8 +30,6 @@ load_dotenv()
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
-
-logging.basicConfig(level=logging.INFO, handlers=[CustomLoggerHandler], force=True)
 
 logger = logging.getLogger(__name__)
 
