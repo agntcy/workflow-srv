@@ -203,8 +203,4 @@ async def search_threads(
     thread_search_request: ThreadSearchRequest = Body(None, description=""),
 ) -> List[Thread]:
     """Search for threads.  This endpoint also functions as the endpoint to list all threads."""
-    threads = await Threads.search(thread_search_request)
-    if threads is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
-
-    return threads
+    return await Threads.search(thread_search_request)
