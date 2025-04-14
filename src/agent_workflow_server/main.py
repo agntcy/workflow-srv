@@ -23,7 +23,6 @@ from agent_workflow_server.apis.authentication import (
 from agent_workflow_server.apis.stateless_runs import router as StatelessRunsApiRouter
 from agent_workflow_server.apis.threads import router as ThreadsApiRouter
 from agent_workflow_server.apis.threads_runs import router as ThreadRunsApiRouter
-from agent_workflow_server.logger.custom_logger import CustomLoggerHandler
 from agent_workflow_server.services.queue import start_workers
 
 load_dotenv()
