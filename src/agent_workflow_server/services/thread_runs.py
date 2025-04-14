@@ -2,7 +2,7 @@ import asyncio
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 
 from agent_workflow_server.generated.models.run_create_stateful import (
@@ -72,16 +72,40 @@ cvs_pending_run = defaultdict(asyncio.Condition)
 
 class ThreadRuns:
     @staticmethod
+    async def get_thread_run_by_ids(
+        thread_id: str, run_id: str
+    ) -> Optional[ApiRunStateful]:
+        """Get a run by thread ID and run ID."""
+        # Fetch the thread from the database
+        thread = DB.get_thread(thread_id)
+        if not thread:
+            logger.error(f"Thread with ID {thread_id} does not exist.")
+            raise ThreadNotFoundError("Thread not found")
+
+        # Fetch the run from the database
+        run = DB.get_run(run_id)
+        if not run:
+            logger.error(f"Run with ID {run_id} does not exist.")
+            return None
+
+        if run["thread_id"] != thread_id:
+            logger.error(f"Run with ID {run_id} does not belong to thread {thread_id}.")
+            raise ValueError(
+                f"Run with ID {run_id} does not belong to thread {thread_id}."
+            )
+        return _to_api_model(run)
+
+    @staticmethod
     async def get_thread_runs(thread_id: str) -> List[ApiRunStateful]:
         """Get all runs for a given thread ID."""
         # Fetch the thread from the database
         thread = DB.get_thread(thread_id)
         if not thread:
             logger.error(f"Thread with ID {thread_id} does not exist.")
-            raise Exception("Thread not found")
+            raise ThreadNotFoundError("Thread not found")
 
         # Placeholder for actual implementation
-        runs = DB.search_runs({"thread_id": thread_id})
+        runs = DB.search_run({"thread_id": thread_id})
         if runs:
             # Convert each run to its API model representation
             return [_to_api_model(run) for run in runs]
@@ -149,3 +173,27 @@ class ThreadRuns:
             raise TimeoutError
 
         return None, None
+
+    @staticmethod
+    async def delete(thread_id: str, run_id: str):
+        """Delete a run by thread ID and run ID."""
+        # Fetch the thread from the database
+        thread = DB.get_thread(thread_id)
+        if not thread:
+            logger.error(f"Thread with ID {thread_id} does not exist.")
+            raise ThreadNotFoundError("Thread not found")
+
+        # Fetch the run from the database
+        run = DB.get_run(run_id)
+        if not run:
+            logger.error(f"Run with ID {run_id} does not exist.")
+            return None
+
+        if run["thread_id"] != thread_id:
+            logger.error(f"Run with ID {run_id} does not belong to thread {thread_id}.")
+            raise ValueError(
+                f"Run with ID {run_id} does not belong to thread {thread_id}."
+            )
+
+        # Delete the run from the database
+        DB.delete_run(run_id)

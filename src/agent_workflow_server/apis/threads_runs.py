@@ -33,7 +33,7 @@ from agent_workflow_server.generated.models.run_wait_response_stateful import (
     RunWaitResponseStateful,
 )
 from agent_workflow_server.services.thread_runs import ThreadNotFoundError, ThreadRuns
-from agent_workflow_server.services.threads import PendingRunError
+from agent_workflow_server.services.threads import PendingRunError, Threads
 from agent_workflow_server.services.validation import (
     InvalidFormatException,
 )
@@ -224,7 +224,14 @@ async def delete_thread_run(
     ),
 ) -> None:
     """Delete a run by ID."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    try:
+        await ThreadRuns.delete(thread_id, run_id)
+    except ThreadNotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(
@@ -247,7 +254,16 @@ async def get_thread_run(
     ),
 ) -> RunStateful:
     """Get a run by ID."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+
+    try:
+        run = await ThreadRuns.get_thread_run_by_ids(thread_id, run_id)
+    except ThreadNotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+    if run is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Run not found")
 
 
 @router.get(
@@ -346,4 +362,10 @@ async def wait_for_thread_run_output(
     ),
 ) -> RunWaitResponseStateful:
     """Blocks waiting for the result of the run. See &#39;GET /runs/{run_id}/wait&#39; for details on the return values."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    thread = await Threads.get_thread_by_id(thread_id)
+    if thread is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
+
+    # TODO check if given thread has the give run
+
+    return await _wait_and_return_run_output(run_id)
