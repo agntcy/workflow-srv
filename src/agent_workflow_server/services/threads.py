@@ -67,7 +67,6 @@ class PendingRunError(Exception):
 
 
 class Threads:
-    
     @staticmethod
     async def check_pending_runs(thread_id: str) -> bool:
         """Check if a thread has pending runs"""
@@ -75,7 +74,7 @@ class Threads:
         if runs:
             return True
         return False
-    
+
     @staticmethod
     async def get_thread_by_id(thread_id: str) -> Optional[ApiThread]:
         """Return a thread by ID"""

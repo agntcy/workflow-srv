@@ -1,11 +1,15 @@
-from datetime import datetime
+import asyncio
 import logging
+from collections import defaultdict
+from datetime import datetime
 from typing import List
 from uuid import uuid4
 
-from agent_workflow_server.generated.models.run_stateful import RunStateful as ApiRunStateful
 from agent_workflow_server.generated.models.run_create_stateful import (
     RunCreateStateful as ApiRunCreateStateful,
+)
+from agent_workflow_server.generated.models.run_stateful import (
+    RunStateful as ApiRunStateful,
 )
 from agent_workflow_server.services.runs import RUNS_QUEUE
 from agent_workflow_server.services.threads import PendingRunError, Threads
@@ -14,8 +18,10 @@ from agent_workflow_server.storage.storage import DB
 
 logger = logging.getLogger(__name__)
 
+
 class ThreadNotFoundError(Exception):
     """Exception raised when a thread is not found in the database."""
+
     pass
 
 
@@ -39,6 +45,8 @@ def _make_run(run_create: ApiRunCreateStateful) -> Run:
         "created_at": curr_time,
         "updated_at": curr_time,
     }
+
+
 def _to_api_model(run: Run) -> ApiRunStateful:
     """
     Convert a Run service model to a Run API model.
@@ -57,6 +65,9 @@ def _to_api_model(run: Run) -> ApiRunStateful:
         created_at=run["created_at"],
         updated_at=run["updated_at"],
     )
+
+
+cvs_pending_run = defaultdict(asyncio.Condition)
 
 
 class ThreadRuns:
@@ -78,7 +89,7 @@ class ThreadRuns:
             logger.warning(f"No runs found for thread ID: {thread_id}")
 
         return []
-    
+
     @staticmethod
     async def put(run_create: ApiRunCreateStateful) -> ApiRunStateful:
         """Create a new run."""
@@ -89,7 +100,7 @@ class ThreadRuns:
             raise ThreadNotFoundError(
                 f"Thread with ID {run_create.thread_id} does not exist."
             )
-        
+
         # Check if the thread has pending runs
         has_pending_runs = Threads.check_pending_runs(run_create.thread_id)
         if has_pending_runs:
@@ -108,8 +119,33 @@ class ThreadRuns:
         DB.create_run_info(run_info)
 
         await RUNS_QUEUE.put(new_run["run_id"])
-        
-        return _to_api_model(new_run)
-    
 
-    
+        return _to_api_model(new_run)
+
+    @staticmethod
+    async def wait_for_output(run_id: str, timeout: float = None):
+        run = DB.get_run(run_id)
+
+        if run is None:
+            return None, None
+
+        if run["status"] != "pending":
+            # If the run is already completed, return the stored output immediately
+            return _to_api_model(run), DB.get_run_output(run_id)
+
+        # TODO: handle removing cvs when run is completed and there are no more subscribers
+        try:
+            async with cvs_pending_run[run_id]:
+                await asyncio.wait_for(
+                    cvs_pending_run[run_id].wait_for(
+                        lambda: DB.get_run_status(run_id) != "pending"
+                    ),
+                    timeout=timeout,
+                )
+                run = DB.get_run(run_id)
+                return _to_api_model(run), DB.get_run_output(run_id)
+        except asyncio.TimeoutError:
+            logger.warning(f"Timeout reached while waiting for run {run_id}")
+            raise TimeoutError
+
+        return None, None

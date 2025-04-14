@@ -24,14 +24,66 @@ from typing_extensions import Annotated
 
 from agent_workflow_server.generated.models.extra_models import TokenModel  # noqa: F401
 from agent_workflow_server.generated.models.run_create_stateful import RunCreateStateful
+from agent_workflow_server.generated.models.run_error import RunError
+from agent_workflow_server.generated.models.run_output import RunOutput
 from agent_workflow_server.generated.models.run_output_stream import RunOutputStream
+from agent_workflow_server.generated.models.run_result import RunResult
 from agent_workflow_server.generated.models.run_stateful import RunStateful
 from agent_workflow_server.generated.models.run_wait_response_stateful import (
     RunWaitResponseStateful,
 )
-from agent_workflow_server.services.thread_runs import ThreadRuns
+from agent_workflow_server.services.thread_runs import ThreadNotFoundError, ThreadRuns
+from agent_workflow_server.services.threads import PendingRunError
+from agent_workflow_server.services.validation import (
+    InvalidFormatException,
+)
+from agent_workflow_server.services.validation import (
+    validate_run_create as validate,
+)
+
+from ..utils.tools import serialize_to_dict
 
 router = APIRouter()
+
+
+async def _validate_run_create(
+    run_create_stateless: RunCreateStateful,
+) -> RunCreateStateful:
+    """Validate RunCreate input against agent's descriptor schema"""
+    try:
+        validate(run_create_stateless)
+    except InvalidFormatException as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        )
+
+
+async def _wait_and_return_run_output(run_id: str) -> RunWaitResponseStateful:
+    try:
+        run, run_output = await ThreadRuns.wait_for_output(run_id)
+    except TimeoutError:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except InvalidFormatException as e:
+        return Response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=str(e)
+        )
+    if run is None:
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
+    if run.status == "success" and run_output is not None:
+        return RunWaitResponseStateful(
+            run=run,
+            output=RunOutput(
+                RunResult(type="result", values=serialize_to_dict(run_output))
+            ),
+        )
+    else:
+        return RunWaitResponseStateful(
+            run=run,
+            output=RunOutput(
+                RunError(type="error", run_id=run_id, errcode=1, description=run_output)
+            ),
+        )
 
 
 @router.post(
@@ -59,7 +111,7 @@ async def cancel_thread_run(
             description="Action to take when cancelling the run. Possible values are `interrupt` or `rollback`. `interrupt` will simply cancel the run. `rollback` will cancel the run and delete the run and associated checkpoints afterwards."
         ),
     ] = Query(
-        'interrupt',
+        "interrupt",
         description="Action to take when cancelling the run. Possible values are &#x60;interrupt&#x60; or &#x60;rollback&#x60;. &#x60;interrupt&#x60; will simply cancel the run. &#x60;rollback&#x60; will cancel the run and delete the run and associated checkpoints afterwards.",
         alias="action",
     ),
@@ -103,6 +155,7 @@ async def create_and_stream_thread_run_output(
     tags=["Thread Runs"],
     summary="Create a run on a thread and block waiting for the result of the run",
     response_model_by_alias=True,
+    dependencies=[Depends(_validate_run_create)],
 )
 async def create_and_wait_for_thread_run_output(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
@@ -111,7 +164,14 @@ async def create_and_wait_for_thread_run_output(
     run_create_stateful: RunCreateStateful = Body(None, description=""),
 ) -> RunWaitResponseStateful:
     """Create a run on a thread and block waiting for its output. See &#39;GET /runs/{run_id}/wait&#39; for details on the return values."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    try:
+        new_run = await ThreadRuns.put(run_create_stateful)
+    except ThreadNotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PendingRunError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
+
+    return await _wait_and_return_run_output(new_run.run_id)
 
 
 @router.post(
@@ -125,6 +185,7 @@ async def create_and_wait_for_thread_run_output(
     tags=["Thread Runs"],
     summary="Create a Background Run on a thread",
     response_model_by_alias=True,
+    dependencies=[Depends(_validate_run_create)],
 )
 async def create_thread_run(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
@@ -133,7 +194,14 @@ async def create_thread_run(
     run_create_stateful: RunCreateStateful = Body(None, description=""),
 ) -> RunStateful:
     """Create a run on a thread, return the run ID immediately. Don&#39;t wait for the final run output."""
-    raise HTTPException(status_code=500, detail="Not implemented")
+    try:
+        return ThreadRuns.put(run_create_stateful)
+    except ThreadNotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PendingRunError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.delete(
