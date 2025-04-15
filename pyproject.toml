@@ -1,6 +1,6 @@
 [project]
 name = "agent-workflow-server"
-version = "0.2.1"
+version = "0.2.3"
 description = ""
 authors = [
     {name = "Janos Sarusi-Kis", email = "janossk@cisco.com"},
