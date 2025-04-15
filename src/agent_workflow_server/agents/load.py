@@ -183,6 +183,13 @@ def get_agent(agent_id: str) -> Agent:
     return Agent(agent_id=agent_id, metadata=AGENTS[agent_id].manifest.metadata)
 
 
+def get_default_agent() -> Agent:
+    if len(AGENTS) == 0:
+        raise ValueError("No agents available")
+    agent_id = next(iter(AGENTS))
+    return Agent(agent_id=agent_id, metadata=AGENTS[agent_id].manifest.metadata)
+
+
 def get_agent_from_agent_info(agent_id: str, agent_info: AgentInfo) -> Agent:
     if agent_id not in AGENTS:
         raise ValueError(f'Agent "{agent_id}" not found')
