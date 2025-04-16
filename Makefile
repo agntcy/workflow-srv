@@ -44,7 +44,7 @@ generate-api: clean update-spec
 	mv $(OUTPUT_DIR_TMP)/$(OUTPUT_DIR)/apis $(OUTPUT_DIR)
 	rm -rf $(OUTPUT_DIR_TMP)
 
-# Install dependecies and run server
+# Install dependencies and run server
 run:
 	poetry install
 	poetry run server
