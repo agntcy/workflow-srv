@@ -26,6 +26,7 @@ class InMemoryDB(DBOperations):
         self._runs: Dict[str, Run] = {}
         self._runs_info: Dict[str, RunInfo] = {}
         self._runs_output: Dict[str, Any] = {}
+        self._threads: Dict[str, Any] = {}
 
         use_fs_storage = os.getenv("AGWS_STORAGE_PERSIST", "True") == "True"
         if use_fs_storage:
@@ -36,7 +37,7 @@ class InMemoryDB(DBOperations):
             logger.debug("Registering database save handler on exit")
             atexit.register(self._save_to_file)
 
-        super().__init__(self._runs, self._runs_info, self._runs_output)
+        super().__init__(self._runs, self._runs_info, self._runs_output, self._threads)
         logger.debug("InMemoryDB initialization complete")
 
     def _save_to_file(self) -> None:
@@ -47,11 +48,13 @@ class InMemoryDB(DBOperations):
                 len(self._runs),
                 len(self._runs_info),
                 len(self._runs_output),
+                len(self._threads),
             )
             data = {
                 "runs": self._runs,
                 "runs_info": self._runs_info,
                 "runs_output": self._runs_output,
+                "threads": self._threads,
             }
             with open(self.storage_file, "wb") as f:
                 pickle.dump(data, f)
@@ -75,11 +78,13 @@ class InMemoryDB(DBOperations):
                 len(data.get("runs", {})),
                 len(data.get("runs_info", {})),
                 len(data.get("runs_output", {})),
+                len(data.get("threads", {})),
             )
 
             self._runs = data.get("runs", {})
             self._runs_info = data.get("runs_info", {})
             self._runs_output = data.get("runs_output", {})
+            self._threads = data.get("threads", {})
             logger.info(
                 f"Database state loaded successfully from {os.path.abspath(self.storage_file)}"
             )
@@ -89,6 +94,7 @@ class InMemoryDB(DBOperations):
             self._runs = {}
             self._runs_info = {}
             self._runs_output = {}
+            self._threads = {}
 
 
 # Global instance of the database

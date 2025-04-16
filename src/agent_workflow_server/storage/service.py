@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from .models import Run, RunInfo, RunStatus
+from .models import Run, RunInfo, RunStatus, Thread
 
 
 class DBOperations:
@@ -15,10 +15,12 @@ class DBOperations:
         runs: Dict[str, Run],
         runs_info: Dict[str, RunInfo],
         runs_output: Dict[str, Any],
+        threads: Dict[str, Thread],
     ):
         self._runs: Dict[str, Run] = runs
         self._runs_info: Dict[str, RunInfo] = runs_info
         self._runs_output: Dict[str, Any] = runs_output
+        self._threads: Dict[str, Thread] = threads
 
     def create_run(self, run: Run) -> Run:
         """Create a new Run"""
@@ -116,3 +118,48 @@ class DBOperations:
         updated_run_info = {**run_info, **updates}
         self._runs_info[run_id] = updated_run_info
         return updated_run_info
+
+    def create_thread(self, thread: Thread) -> Thread:
+        """Create a new Thread"""
+        thread_id = str(thread["thread_id"])
+        if thread_id in self._threads:
+            raise ValueError(f"Thread with ID {thread_id} already exists")
+        self._threads[thread_id] = thread
+        return thread
+
+    def get_thread(self, thread_id: str) -> Optional[Thread]:
+        """Get a Thread by ID"""
+        return self._threads.get(thread_id)
+
+    def list_threads(self) -> List[Thread]:
+        """List all Threads"""
+        return list(self._threads.values())
+
+    def update_thread(self, thread_id: str, updates: dict) -> Optional[Thread]:
+        """Update a Thread with the given updates"""
+        if thread_id not in self._threads:
+            return None
+        thread = self._threads[thread_id]
+        updated_thread = {**thread, **updates, "updated_at": datetime.now()}
+        self._threads[thread_id] = updated_thread
+        return updated_thread
+
+    def delete_thread(self, thread_id: str) -> bool:
+        """Delete a Thread"""
+        if thread_id not in self._threads:
+            return False
+        del self._threads[thread_id]
+        return True
+
+    def search_thread(self, filters: dict) -> List[Thread]:
+        """Search Threads by filters"""
+        results = []
+        for thread in self._threads.values():
+            matches = True
+            for key, value in filters.items():
+                if key not in thread or thread[key] != value:
+                    matches = False
+                    break
+            if matches:
+                results.append(thread)
+        return results

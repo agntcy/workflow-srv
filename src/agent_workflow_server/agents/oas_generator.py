@@ -102,7 +102,7 @@ def _add_default_agent_id(spec_dict, agent_id: str):
         for operation in path_item.values():
             if not isinstance(operation, dict):
                 continue
-            
+
             if "parameters" in operation:
                 for param in operation["parameters"]:
                     if param.get("name") == "agent_id":

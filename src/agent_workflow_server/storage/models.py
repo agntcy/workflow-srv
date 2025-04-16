@@ -46,3 +46,23 @@ class RunInfo(TypedDict):
     ended_at: Optional[datetime]
     exec_s: Optional[float]
     queue_s: Optional[float]
+
+
+class ThreadState(TypedDict):
+    """Definition of a ThreadState record"""
+
+    checkpoint_id: str
+    values: Dict[str, Any]
+    messages: Optional[List[Dict[str, Any]]]
+    metadata: Optional[Dict[str, Any]]
+
+
+class Thread(TypedDict):
+    """Definition of a Thread record"""
+
+    thread_id: str
+    metadata: Optional[Dict[str, Any]]
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    states: Optional[List[ThreadState]]
