@@ -115,23 +115,19 @@ class ThreadRuns:
         return []
 
     @staticmethod
-    async def put(run_create: ApiRunCreateStateful) -> ApiRunStateful:
+    async def put(run_create: ApiRunCreateStateful, thread_id: str) -> ApiRunStateful:
         """Create a new run."""
         # Check if the thread exists
-        thread = DB.get_thread(run_create.thread_id)
+        thread = Threads.get_thread_by_id(thread_id)
         if not thread:
-            logger.error(f"Thread with ID {run_create.thread_id} does not exist.")
-            raise ThreadNotFoundError(
-                f"Thread with ID {run_create.thread_id} does not exist."
-            )
+            logger.error(f"Thread with ID {thread_id} does not exist.")
+            raise ThreadNotFoundError(f"Thread with ID {thread_id} does not exist.")
 
         # Check if the thread has pending runs
-        has_pending_runs = Threads.check_pending_runs(run_create.thread_id)
+        has_pending_runs = Threads.check_pending_runs(thread_id)
         if has_pending_runs:
-            logger.error(f"Thread with ID {run_create.thread_id} has pending runs.")
-            raise PendingRunError(
-                f"Thread with ID {run_create.thread_id} has pending runs."
-            )
+            logger.error(f"Thread with ID {thread_id} has pending runs.")
+            raise PendingRunError(f"Thread with ID {thread_id} has pending runs.")
 
         new_run = _make_run(run_create)
         DB.create_run(new_run)

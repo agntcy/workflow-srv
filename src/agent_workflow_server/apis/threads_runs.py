@@ -165,7 +165,7 @@ async def create_and_wait_for_thread_run_output(
 ) -> RunWaitResponseStateful:
     """Create a run on a thread and block waiting for its output. See &#39;GET /runs/{run_id}/wait&#39; for details on the return values."""
     try:
-        new_run = await ThreadRuns.put(run_create_stateful)
+        new_run = await ThreadRuns.put(run_create_stateful, thread_id)
     except ThreadNotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PendingRunError as e:
@@ -195,7 +195,7 @@ async def create_thread_run(
 ) -> RunStateful:
     """Create a run on a thread, return the run ID immediately. Don&#39;t wait for the final run output."""
     try:
-        return ThreadRuns.put(run_create_stateful)
+        return ThreadRuns.put(run_create_stateful, thread_id)
     except ThreadNotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PendingRunError as e:
