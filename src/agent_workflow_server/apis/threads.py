@@ -159,7 +159,7 @@ async def get_thread_history(
 ) -> List[ThreadState]:
     """Get all past states for a thread."""
 
-    thread = await Threads.get_thread_state(thread_id, limit, before)
+    thread = await Threads.get_history(thread_id)
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 

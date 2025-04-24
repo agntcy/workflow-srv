@@ -10,7 +10,7 @@ from langgraph.types import Command
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
 from agent_workflow_server.services.message import Message
-from agent_workflow_server.storage.models import Run
+from agent_workflow_server.storage.models import Run, ThreadState
 
 
 class LangGraphAdapter(BaseAdapter):
@@ -61,3 +61,46 @@ class LangGraphAgent(BaseAgent):
                         event=k,
                         data=v,
                     )
+
+    async def get_state_snapshot(self, thread_id):
+        """Returns the thread state snapshot associated with the agent."""
+        print(f"Getting state snapshot: {thread_id}")
+        config = {}
+        configurable = config.get("configurable")
+        if configurable is None:
+            configurable = {}
+        configurable.setdefault("thread_id", thread_id)
+
+        config = RunnableConfig(configurable=configurable, tags=None)
+
+        snapshot = await self.agent.aget_state(config=config)
+
+        return ThreadState(
+            checkpoint_id=snapshot.config["configurable"]["checkpoint_id"],
+            values=snapshot.values,
+            metadata=snapshot.metadata,
+        )
+
+    async def get_history(self, thread_id):
+        """Returns the history of the thread associated with the agent."""
+        print(f"Getting history: {thread_id}")
+        config = {}
+        configurable = config.get("configurable")
+        if configurable is None:
+            configurable = {}
+        configurable.setdefault("thread_id", thread_id)
+
+        config = RunnableConfig(configurable=configurable, tags=None)
+
+        # Collect history items from the async generator
+        history = []
+        async for item in self.agent.aget_state_history(config=config):
+            history.append(
+                ThreadState(
+                    checkpoint_id=item.config["configurable"]["checkpoint_id"],
+                    values=item.values,
+                    metadata=item.metadata,
+                )
+            )
+
+        return history

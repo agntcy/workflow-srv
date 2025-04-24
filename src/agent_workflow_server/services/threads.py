@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import uuid4
 
+from agent_workflow_server.agents.load import AGENTS
 from agent_workflow_server.generated.models.thread import (
     Thread as ApiThread,
 )
@@ -203,26 +204,22 @@ class Threads:
         return [_to_api_model(thread) for thread in threads]
 
     @staticmethod
-    async def get_thread_state(
-        thread_id: str, limit: int, before: str
-    ) -> Optional[List[ApiThreadState]]:
-        """Get the state of a thread"""
-        thread = DB.get_thread(thread_id)
-        if thread is None:
-            return None
+    async def get_history(thread_id: str) -> Optional[List[ApiThreadState]]:
+        """Get the history of a thread"""
+        ## TODO : Update this for multi agent support
+        agent_info = next(iter(AGENTS.values()))
+        agent = agent_info.agent
 
-        thread_states = thread["states"]
-        if thread_states is None:
-            return None
+        history = await agent.get_history(thread_id)
 
-        ## TODO proper handling of limit and before
-        ## TODO proper handling of messages and metadata
-        return [
+        # Convert the history to the API model
+        api_history = [
             ApiThreadState(
                 checkpoint=ApiThreadCheckpoint(checkpoint_id=state["checkpoint_id"]),
                 values=state["values"],
                 messages=state.get("messages"),
                 metadata=state.get("metadata"),
             )
-            for state in thread_states
+            for state in history
         ]
+        return api_history

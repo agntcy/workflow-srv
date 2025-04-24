@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, List, Optional
 
 from agent_workflow_server.services.message import Message
-from agent_workflow_server.storage.models import Run
+from agent_workflow_server.storage.models import Run, ThreadState
 
 
 class BaseAgent(ABC):
@@ -13,6 +13,16 @@ class BaseAgent(ABC):
     async def astream(self, run: Run) -> AsyncGenerator[Message, None]:
         """Invokes the agent with the given `Run` and streams (returns) `Message`s asynchronously.
         The last `Message` includes the final result."""
+        pass
+
+    @abstractmethod
+    async def get_state_snapshot(self, thread_id: str) -> ThreadState:
+        """Returns the thread state snapshot associated with the agent."""
+        pass
+
+    @abstractmethod
+    async def get_history(self, thread_id: str) -> List[ThreadState]:
+        """Returns the history of the thread associated with the agent."""
         pass
 
 
