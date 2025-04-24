@@ -38,7 +38,7 @@ from agent_workflow_server.services.validation import (
     InvalidFormatException,
 )
 from agent_workflow_server.services.validation import (
-    validate_run_create as validate,
+    validate_run_create_stateful as validate,
 )
 
 from ..utils.tools import make_serializable
@@ -47,11 +47,11 @@ router = APIRouter()
 
 
 async def _validate_run_create(
-    run_create_stateless: RunCreateStateful,
+    run_create_stateful: RunCreateStateful,
 ) -> RunCreateStateful:
     """Validate RunCreate input against agent's descriptor schema"""
     try:
-        validate(run_create_stateless)
+        validate(run_create_stateful)
     except InvalidFormatException as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
