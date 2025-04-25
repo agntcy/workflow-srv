@@ -265,6 +265,8 @@ async def get_thread_run(
     if run is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Run not found")
 
+    return run
+
 
 @router.get(
     "/threads/{thread_id}/runs",
@@ -286,7 +288,7 @@ async def list_thread_runs(
 ) -> List[RunStateful]:
     """List runs for a thread."""
     try:
-        return ThreadRuns.get_thread_runs(thread_id)
+        return await ThreadRuns.get_thread_runs(thread_id)
     except Exception as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
 

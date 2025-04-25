@@ -87,9 +87,9 @@ class Threads:
     async def get_thread_by_id(thread_id: str) -> Optional[ApiThread]:
         """Return a thread by ID"""
 
-        thread = DB.get_thread(thread_id)
         if thread_id not in DB._threads:
             return None
+        thread = DB.get_thread(thread_id)
 
         ## TODO : Update this for multi agent support
         agent_info = next(iter(AGENTS.values()))
