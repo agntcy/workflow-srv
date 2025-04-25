@@ -6,6 +6,7 @@ from typing import Optional
 from langchain_core.runnables import RunnableConfig
 from langgraph.constants import INTERRUPT
 from langgraph.graph.graph import CompiledGraph, Graph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 
 from agent_workflow_server.agents.base import (
@@ -39,6 +40,12 @@ class LangGraphAgent(BaseAgent):
         if configurable is None:
             configurable = {}
         configurable.setdefault("thread_id", run["thread_id"])
+
+        # If it's a CompiledStateGraph, validate (and deserialize) input
+        if isinstance(self.agent, CompiledStateGraph) and hasattr(
+            self.agent.builder.schema, "model_validate"
+        ):
+            input = self.agent.builder.schema.model_validate(input)
 
         # If there's an interrupt answer, ovverride the input
         if "interrupt" in run and "user_data" in run["interrupt"]:

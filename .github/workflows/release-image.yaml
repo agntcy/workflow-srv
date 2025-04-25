@@ -15,8 +15,29 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  checkout-version-check:
+    name: checkout & version check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Version check
+        run: |
+          MAIN_VERSION=${GITHUB_REF_NAME%-*}
+          GIT_TAG_VERSION=${MAIN_VERSION#v}
+          PYPROJECT_VERSION=$(grep -m 1 version pyproject.toml | grep -e '[0-9].[0-9].[0-9]' -o)
+          if [[ "$GIT_TAG_VERSION" == "$PYPROJECT_VERSION" ]]; then
+            printf "Version check passed"
+          else
+            printf "Version check failed: version in pyproject.toml (%s) and git tag version (%s) are mismatched" "$PYPROJECT_VERSION" "$GIT_TAG_VERSION"
+            exit 1
+          fi
   build-push:
     name: Build docker image - wfsrv
+    needs: [checkout-version-check]
     uses: ./.github/workflows/reusable-docker-build-push.yaml
     permissions:
       contents: "read"

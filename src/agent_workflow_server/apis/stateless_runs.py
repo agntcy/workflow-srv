@@ -18,6 +18,7 @@ from fastapi import (
 from pydantic import Field, StrictBool, StrictStr
 from typing_extensions import Annotated
 
+from agent_workflow_server.agents.load import get_default_agent
 from agent_workflow_server.generated.models.run_create_stateless import (
     RunCreateStateless,
 )
@@ -42,6 +43,24 @@ from agent_workflow_server.services.validation import (
 )
 
 router = APIRouter()
+
+
+async def _validate_run_create_stateless(
+    run_create_stateless: RunCreateStateless,
+) -> RunCreateStateless:
+    if run_create_stateless.agent_id is None:
+        """Pre-process the RunCreateStateless object to set the agent_id if not provided."""
+        run_create_stateless.agent_id = get_default_agent().agent_id
+    return run_create_stateless
+
+
+async def _validate_run_search_request(
+    run_search_request: RunSearchRequest,
+) -> RunSearchRequest:
+    if run_search_request.agent_id is None:
+        """Pre-process the RunSearchRequest object to set the agent_id if not provided."""
+        run_search_request.agent_id = get_default_agent().agent_id
+    return run_search_request
 
 
 async def _validate_run_create(
@@ -141,7 +160,9 @@ async def cancel_stateless_run(
     dependencies=[Depends(_validate_run_create)],
 )
 async def create_and_stream_stateless_run_output(
-    run_create_stateless: RunCreateStateless = Body(None, description=""),
+    run_create_stateless: Annotated[
+        RunCreateStateless, Depends(_validate_run_create_stateless)
+    ] = Body(None, description=""),
 ) -> RunOutputStream:
     """Create a stateless run and join its output stream. See &#39;GET /runs/{run_id}/stream&#39; for details on the return values."""
     raise HTTPException(status_code=500, detail="Not implemented")
@@ -161,7 +182,9 @@ async def create_and_stream_stateless_run_output(
     dependencies=[Depends(_validate_run_create)],
 )
 async def create_and_wait_for_stateless_run_output(
-    run_create_stateless: RunCreateStateless = Body(None, description=""),
+    run_create_stateless: Annotated[
+        RunCreateStateless, Depends(_validate_run_create_stateless)
+    ] = Body(None, description=""),
 ) -> RunWaitResponseStateless:
     """Create a stateless run and wait for its output. See &#39;GET /runs/{run_id}/wait&#39; for details on the return values."""
     new_run = await Runs.put(run_create_stateless)
@@ -182,7 +205,9 @@ async def create_and_wait_for_stateless_run_output(
     dependencies=[Depends(_validate_run_create)],
 )
 async def create_stateless_run(
-    run_create_stateless: RunCreateStateless = Body(None, description=""),
+    run_create_stateless: Annotated[
+        RunCreateStateless, Depends(_validate_run_create_stateless)
+    ] = Body(None, description=""),
 ) -> RunStateless:
     """Create a stateless run, return the run ID immediately. Don&#39;t wait for the final run output."""
     return await Runs.put(run_create_stateless)
@@ -273,7 +298,9 @@ async def resume_stateless_run(
     response_model_by_alias=True,
 )
 async def search_stateless_runs(
-    run_search_request: RunSearchRequest = Body(None, description=""),
+    run_search_request: Annotated[
+        RunSearchRequest, Depends(_validate_run_search_request)
+    ] = Body(None, description=""),
 ) -> List[RunStateless]:
     """Search for stateless run.  This endpoint also functions as the endpoint to list all stateless Runs."""
     return Runs.search_for_runs(run_search_request)
