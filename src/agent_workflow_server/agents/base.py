@@ -20,7 +20,7 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    async def get_thread_state(self, thread_id: str) -> ThreadState:
+    async def get_thread_state(self, thread_id: str) -> Optional[ThreadState]:
         """Returns the thread state associated with the agent."""
         pass
 

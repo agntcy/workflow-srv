@@ -64,16 +64,17 @@ class LangGraphAgent(BaseAgent):
 
     async def get_thread_state(self, thread_id):
         """Returns the thread state snapshot associated with the agent."""
-        config = {}
-        configurable = config.get("configurable")
-        if configurable is None:
-            configurable = {}
-        configurable.setdefault("thread_id", thread_id)
-
-        config = RunnableConfig(configurable=configurable, tags=None)
+        config = RunnableConfig(
+            configurable={"thread_id": thread_id},
+            tags=None
+        )
 
         snapshot = await self.agent.aget_state(config=config)
 
+       ## if snapshot values is empty return None
+        if snapshot.values is None or len(snapshot.values) == 0:
+            return None
+        
         return ThreadState(
             checkpoint_id=snapshot.config["configurable"]["checkpoint_id"],
             values=snapshot.values,
@@ -82,13 +83,10 @@ class LangGraphAgent(BaseAgent):
 
     async def get_history(self, thread_id,limit,before):
         """Returns the history of the thread associated with the agent."""
-        config = {}
-        configurable = config.get("configurable")
-        if configurable is None:
-            configurable = {}
-        configurable.setdefault("thread_id", thread_id)
-
-        config = RunnableConfig(configurable=configurable, tags=None)
+        config = RunnableConfig(
+            configurable={"thread_id": thread_id},
+            tags=None
+        )
 
         # Collect history items from the async generator
         history = []

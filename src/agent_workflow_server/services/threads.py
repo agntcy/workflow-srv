@@ -50,12 +50,19 @@ def _to_api_model(thread: Thread) -> ApiThread:
     Returns:
         Thread: The API model representation of the thread.
     """
+    # If thread["states"] is not None and not emty,get the values property of the first element
+    # else set it to None
+    values = None
+    if thread.get("states") and len(thread["states"]) > 0:
+        values = thread["states"][0].get("values")
+    
     return ApiThread(
         thread_id=thread["thread_id"],
         metadata=thread["metadata"],
         status=thread["status"],
         created_at=thread["created_at"],
         updated_at=thread["updated_at"],
+        values=values if values is not None else None,
     )
 
 
@@ -83,6 +90,21 @@ class Threads:
         thread = DB.get_thread(thread_id)
         if thread_id not in DB._threads:
             return None
+        
+        ## TODO : Update this for multi agent support
+        agent_info = next(iter(AGENTS.values()))
+        agent = agent_info.agent
+
+        state = await agent.get_thread_state(thread_id)
+        if state is not None:
+            thread["states"] = [
+                {
+                    "checkpoint_id": state["checkpoint_id"],
+                    "values": state["values"],
+                    "messages": state.get("messages"),  
+                    "metadata": state.get("metadata"),
+                }
+            ]
 
         return _to_api_model(thread)
 
