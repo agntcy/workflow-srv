@@ -8,7 +8,7 @@ from langgraph.constants import INTERRUPT
 from langgraph.graph.graph import CompiledGraph, Graph
 from langgraph.types import Command
 
-from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
+from agent_workflow_server.agents.base import BaseAdapter, BaseAgent, ThreadsNotSupportedError
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.storage.models import Run, ThreadState
 
@@ -62,9 +62,8 @@ class LangGraphAgent(BaseAgent):
                         data=v,
                     )
 
-    async def get_state_snapshot(self, thread_id):
+    async def get_thread_state(self, thread_id):
         """Returns the thread state snapshot associated with the agent."""
-        print(f"Getting state snapshot: {thread_id}")
         config = {}
         configurable = config.get("configurable")
         if configurable is None:
@@ -81,9 +80,8 @@ class LangGraphAgent(BaseAgent):
             metadata=snapshot.metadata,
         )
 
-    async def get_history(self, thread_id):
+    async def get_history(self, thread_id,limit,before):
         """Returns the history of the thread associated with the agent."""
-        print(f"Getting history: {thread_id}")
         config = {}
         configurable = config.get("configurable")
         if configurable is None:
@@ -94,13 +92,21 @@ class LangGraphAgent(BaseAgent):
 
         # Collect history items from the async generator
         history = []
-        async for item in self.agent.aget_state_history(config=config):
-            history.append(
-                ThreadState(
-                    checkpoint_id=item.config["configurable"]["checkpoint_id"],
-                    values=item.values,
-                    metadata=item.metadata,
+        try:
+            async for item in self.agent.aget_state_history(config=config, limit=limit, before=before):
+                history.append(
+                    ThreadState(
+                        checkpoint_id=item.config["configurable"]["checkpoint_id"],
+                        values=item.values,
+                        metadata=item.metadata,
+                    )
                 )
-            )
-
+        except ValueError as e:
+            if str(e) == "No checkpointer set":
+                raise ThreadsNotSupportedError(
+                    "This agent does not support threads."
+                ) from e
+            else:   
+                raise e
+        
         return history

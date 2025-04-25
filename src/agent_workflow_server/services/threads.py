@@ -204,13 +204,13 @@ class Threads:
         return [_to_api_model(thread) for thread in threads]
 
     @staticmethod
-    async def get_history(thread_id: str) -> Optional[List[ApiThreadState]]:
+    async def get_history(thread_id: str, limit: int, before:int) -> Optional[List[ApiThreadState]]:
         """Get the history of a thread"""
         ## TODO : Update this for multi agent support
         agent_info = next(iter(AGENTS.values()))
         agent = agent_info.agent
 
-        history = await agent.get_history(thread_id)
+        history = await agent.get_history(thread_id, limit, before)
 
         # Convert the history to the API model
         api_history = [

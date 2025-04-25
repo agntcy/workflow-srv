@@ -16,6 +16,7 @@ from fastapi import (
 from pydantic import Field, StrictInt, StrictStr
 from typing_extensions import Annotated
 
+from agent_workflow_server.agents.base import ThreadsNotSupportedError
 from agent_workflow_server.generated.models.thread import Thread
 from agent_workflow_server.generated.models.thread_create import ThreadCreate
 from agent_workflow_server.generated.models.thread_patch import ThreadPatch
@@ -159,9 +160,15 @@ async def get_thread_history(
 ) -> List[ThreadState]:
     """Get all past states for a thread."""
 
-    thread = await Threads.get_history(thread_id)
-    if thread is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
+    try:
+        thread = await Threads.get_history(thread_id,limit, before)
+        if thread is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
+    except ThreadsNotSupportedError:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Thread is not supported for this agent.",
+        )
 
     return thread
 
