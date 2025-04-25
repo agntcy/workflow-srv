@@ -77,7 +77,15 @@ class LangGraphAgent(BaseAgent):
         """Returns the thread state snapshot associated with the agent."""
         config = RunnableConfig(configurable={"thread_id": thread_id}, tags=None)
 
-        snapshot = await self.agent.aget_state(config=config)
+        try:
+            snapshot = await self.agent.aget_state(config=config)
+        except ValueError as e:
+            if str(e) == "No checkpointer set":
+                raise ThreadsNotSupportedError(
+                    "This agent does not support threads."
+                ) from e
+            else:
+                raise e
         ## if snapshot values is empty return None
         if snapshot.values is None or len(snapshot.values) == 0:
             return None

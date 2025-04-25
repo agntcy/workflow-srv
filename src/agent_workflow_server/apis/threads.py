@@ -133,7 +133,13 @@ async def get_thread(
     ),
 ) -> Thread:
     """Get a thread from its ID."""
-    thread = await Threads.get_thread_by_id(thread_id)
+    try:
+        thread = await Threads.get_thread_by_id(thread_id)
+    except ThreadsNotSupportedError:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Thread is not supported for this agent.",
+        )
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 

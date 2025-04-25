@@ -22,6 +22,7 @@ from fastapi import (  # noqa: F401
 from pydantic import Field, StrictBool, StrictInt, StrictStr
 from typing_extensions import Annotated
 
+from agent_workflow_server.agents.base import ThreadsNotSupportedError
 from agent_workflow_server.agents.load import get_default_agent
 from agent_workflow_server.generated.models.extra_models import TokenModel  # noqa: F401
 from agent_workflow_server.generated.models.run_create_stateful import RunCreateStateful
@@ -370,7 +371,13 @@ async def wait_for_thread_run_output(
     ),
 ) -> RunWaitResponseStateful:
     """Blocks waiting for the result of the run. See &#39;GET /runs/{run_id}/wait&#39; for details on the return values."""
-    thread = await Threads.get_thread_by_id(thread_id)
+    try:
+        thread = await Threads.get_thread_by_id(thread_id)
+    except ThreadsNotSupportedError:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Thread is not supported for this agent.",
+        )
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
