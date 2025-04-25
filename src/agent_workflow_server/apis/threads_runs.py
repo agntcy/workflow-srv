@@ -55,7 +55,7 @@ async def _validate_run_create(
         if run_create_stateful.agent_id is None:
             """Pre-process the RunCreateStateless object to set the agent_id if not provided."""
             run_create_stateful.agent_id = get_default_agent().agent_id
-        
+
         validate(run_create_stateful)
     except InvalidFormatException as e:
         raise HTTPException(
@@ -138,14 +138,13 @@ async def cancel_thread_run(
     tags=["Thread Runs"],
     summary="Create a run on a thread and stream its output",
     response_model_by_alias=True,
+    dependencies=[Depends(_validate_run_create)],
 )
 async def create_and_stream_thread_run_output(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
         ..., description="The ID of the thread."
     ),
-    run_create_stateful: Annotated[
-        RunCreateStateful, Depends(_validate_run_create)
-    ] = Body(None, description=""),
+    run_create_stateful: RunCreateStateful = Body(None, description=""),
 ) -> RunOutputStream:
     """Create a run on a thread and join its output stream. See &#39;GET /runs/{run_id}/stream&#39; for details on the return values."""
     raise HTTPException(status_code=500, detail="Not implemented")
@@ -168,9 +167,7 @@ async def create_and_wait_for_thread_run_output(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
         ..., description="The ID of the thread."
     ),
-    run_create_stateful: Annotated[
-        RunCreateStateful, Depends(_validate_run_create)
-    ] = Body(None, description=""),
+    run_create_stateful: RunCreateStateful = Body(None, description=""),
 ) -> RunWaitResponseStateful:
     """Create a run on a thread and block waiting for its output. See &#39;GET /runs/{run_id}/wait&#39; for details on the return values."""
     try:
@@ -200,10 +197,7 @@ async def create_thread_run(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
         ..., description="The ID of the thread."
     ),
-
-    run_create_stateful: Annotated[
-        RunCreateStateful, Depends(_validate_run_create)
-    ] = Body(None, description=""),
+    run_create_stateful: RunCreateStateful = Body(None, description=""),
 ) -> RunStateful:
     """Create a run on a thread, return the run ID immediately. Don&#39;t wait for the final run output."""
     try:
