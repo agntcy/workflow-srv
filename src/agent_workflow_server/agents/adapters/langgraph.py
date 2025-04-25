@@ -8,7 +8,11 @@ from langgraph.constants import INTERRUPT
 from langgraph.graph.graph import CompiledGraph, Graph
 from langgraph.types import Command
 
-from agent_workflow_server.agents.base import BaseAdapter, BaseAgent, ThreadsNotSupportedError
+from agent_workflow_server.agents.base import (
+    BaseAdapter,
+    BaseAgent,
+    ThreadsNotSupportedError,
+)
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.storage.models import Run, ThreadState
 
@@ -62,36 +66,30 @@ class LangGraphAgent(BaseAgent):
                         data=v,
                     )
 
-    async def get_thread_state(self, thread_id):
+    async def get_agent_state(self, thread_id):
         """Returns the thread state snapshot associated with the agent."""
-        config = RunnableConfig(
-            configurable={"thread_id": thread_id},
-            tags=None
-        )
+        config = RunnableConfig(configurable={"thread_id": thread_id}, tags=None)
 
         snapshot = await self.agent.aget_state(config=config)
-
-       ## if snapshot values is empty return None
+        ## if snapshot values is empty return None
         if snapshot.values is None or len(snapshot.values) == 0:
             return None
-        
         return ThreadState(
             checkpoint_id=snapshot.config["configurable"]["checkpoint_id"],
             values=snapshot.values,
             metadata=snapshot.metadata,
         )
 
-    async def get_history(self, thread_id,limit,before):
+    async def get_history(self, thread_id, limit, before):
         """Returns the history of the thread associated with the agent."""
-        config = RunnableConfig(
-            configurable={"thread_id": thread_id},
-            tags=None
-        )
+        config = RunnableConfig(configurable={"thread_id": thread_id}, tags=None)
 
         # Collect history items from the async generator
         history = []
         try:
-            async for item in self.agent.aget_state_history(config=config, limit=limit, before=before):
+            async for item in self.agent.aget_state_history(
+                config=config, limit=limit, before=before
+            ):
                 history.append(
                     ThreadState(
                         checkpoint_id=item.config["configurable"]["checkpoint_id"],
@@ -104,7 +102,7 @@ class LangGraphAgent(BaseAgent):
                 raise ThreadsNotSupportedError(
                     "This agent does not support threads."
                 ) from e
-            else:   
+            else:
                 raise e
-        
+
         return history

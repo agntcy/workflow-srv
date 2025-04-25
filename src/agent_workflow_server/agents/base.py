@@ -7,8 +7,10 @@ from typing import Any, AsyncGenerator, List, Optional
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.storage.models import Run, ThreadState
 
+
 class ThreadsNotSupportedError(Exception):
     """Exception raised when threads are not supported by the agent."""
+
     pass
 
 
@@ -20,12 +22,14 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    async def get_thread_state(self, thread_id: str) -> Optional[ThreadState]:
+    async def get_agent_state(self, thread_id: str) -> Optional[ThreadState]:
         """Returns the thread state associated with the agent."""
         pass
 
     @abstractmethod
-    async def get_history(self, thread_id: str, limit:int, before:int) -> List[ThreadState]:
+    async def get_history(
+        self, thread_id: str, limit: int, before: int
+    ) -> List[ThreadState]:
         """Returns the history of the thread associated with the agent."""
         pass
 

@@ -135,7 +135,6 @@ class ThreadRuns:
             logger.error(f"Thread with ID {thread_id} has pending runs.")
             raise PendingRunError(f"Thread with ID {thread_id} has pending runs.")
 
-
         new_run = _make_run(run_create)
         run_info = RunInfo(
             run_id=new_run["run_id"],

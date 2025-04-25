@@ -55,14 +55,14 @@ def _to_api_model(thread: Thread) -> ApiThread:
     values = None
     if thread.get("states") and len(thread["states"]) > 0:
         values = thread["states"][0].get("values")
-    
+
     return ApiThread(
         thread_id=thread["thread_id"],
         metadata=thread["metadata"],
         status=thread["status"],
         created_at=thread["created_at"],
         updated_at=thread["updated_at"],
-        values=values if values is not None else None,
+        values=values,
     )
 
 
@@ -90,18 +90,17 @@ class Threads:
         thread = DB.get_thread(thread_id)
         if thread_id not in DB._threads:
             return None
-        
+
         ## TODO : Update this for multi agent support
         agent_info = next(iter(AGENTS.values()))
         agent = agent_info.agent
 
-        state = await agent.get_thread_state(thread_id)
+        state = await agent.get_agent_state(thread_id)
         if state is not None:
             thread["states"] = [
                 {
                     "checkpoint_id": state["checkpoint_id"],
                     "values": state["values"],
-                    "messages": state.get("messages"),  
                     "metadata": state.get("metadata"),
                 }
             ]
@@ -161,63 +160,8 @@ class Threads:
     async def update_thread(thread_id: str, updates: dict) -> Optional[ApiThread]:
         """Update a thread"""
 
-        # Check if the thread exists
-        thread = DB.get_thread(thread_id)
-        if thread is None:
-            return None
-
-        # A ThreadPatch object (which is in the updates as a dict) can contain a
-        # checkpoint, metadata (for the thread not for the state), values and messages.
-
-        if "metadata" in updates and updates["metadata"]:
-            metaUpdates = {"metadata": updates["metadata"]}
-            thread = DB.update_thread(thread_id, metaUpdates)
-
-        threadStates = thread["states"]
-
-        # if checkpoint is in updates and has a checkpoint_id in it
-        if "checkpoint" in updates and updates["checkpoint"]:
-            checkpoint = updates["checkpoint"]
-            checkpoint_id = checkpoint["checkpoint_id"]
-            # Check if the checkpoint ID already exists in the thread states
-            if threadStates is None:
-                threadStates = []
-            existing_checkpoints = [state["checkpoint_id"] for state in threadStates]
-            if checkpoint_id in existing_checkpoints:
-                # Update the existing checkpoint state
-                for state in threadStates:
-                    if state["checkpoint_id"] == checkpoint_id:
-                        # update state with new values, messages and metadata
-                        state["values"] = updates["values"]
-                        state["messages"] = updates["messages"]
-
-            else:
-                # Add a new checkpoint state
-                threadStates.append(
-                    {
-                        "checkpoint_id": checkpoint_id,
-                        "values": updates["values"],
-                        "messages": updates["messages"],
-                    }
-                )
-
-        # Update the thread with the new states
-        stateUpdates = {"states": threadStates}
-        thread = DB.update_thread(thread_id, stateUpdates)
-
-        return _to_api_model(thread)
-
-    @staticmethod
-    async def delete_thread(thread_id: str) -> bool:
-        """Delete a thread"""
-        # Get runs associated with the thread and check if any of them pending
-        has_pending_runs = await Threads.check_pending_runs(thread_id)
-        if has_pending_runs:
-            raise PendingRunError(
-                f"Thread with ID {thread_id} has pending runs and cannot be deleted."
-            )
-
-        return DB.delete_thread(thread_id)
+        # TODO: TBD
+        return None
 
     @staticmethod
     async def search(filters: dict) -> list[ApiThread]:
@@ -226,7 +170,9 @@ class Threads:
         return [_to_api_model(thread) for thread in threads]
 
     @staticmethod
-    async def get_history(thread_id: str, limit: int, before:int) -> Optional[List[ApiThreadState]]:
+    async def get_history(
+        thread_id: str, limit: int, before: int
+    ) -> Optional[List[ApiThreadState]]:
         """Get the history of a thread"""
         ## TODO : Update this for multi agent support
         agent_info = next(iter(AGENTS.values()))
@@ -239,7 +185,6 @@ class Threads:
             ApiThreadState(
                 checkpoint=ApiThreadCheckpoint(checkpoint_id=state["checkpoint_id"]),
                 values=state["values"],
-                messages=state.get("messages"),
                 metadata=state.get("metadata"),
             )
             for state in history
