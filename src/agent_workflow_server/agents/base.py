@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, List, Optional
 
 from agent_workflow_server.services.message import Message
-from agent_workflow_server.storage.models import Run, ThreadState
+from agent_workflow_server.services.thread_state import ThreadState
+from agent_workflow_server.storage.models import Run
 
 
 class ThreadsNotSupportedError(Exception):
@@ -31,6 +32,13 @@ class BaseAgent(ABC):
         self, thread_id: str, limit: int, before: int
     ) -> List[ThreadState]:
         """Returns the history of the thread associated with the agent."""
+        pass
+
+    @abstractmethod
+    async def update_agent_state(
+        self, thread_id: str, state: ThreadState
+    ) -> Optional[ThreadState]:
+        """Updates the thread state associated with the agent."""
         pass
 
 

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 from uuid import uuid4
 
 from agent_workflow_server.agents.load import AGENTS
@@ -14,6 +14,7 @@ from agent_workflow_server.generated.models.thread_create import ThreadCreate
 from agent_workflow_server.generated.models.thread_state import (
     ThreadState as ApiThreadState,
 )
+from agent_workflow_server.services.thread_state import ThreadState
 from agent_workflow_server.storage.models import Thread
 from agent_workflow_server.storage.storage import DB
 
@@ -40,21 +41,21 @@ def _make_thread(thread_create: ThreadCreate) -> Thread:
     }
 
 
-def _to_api_model(thread: Thread) -> ApiThread:
+def _to_api_model(thread: Thread, state: Optional[ThreadState] = None) -> ApiThread:
     """
     Convert a Thread service model to a Thread API model.
 
     Args:
         thread (Thread): The service model representation of a thread.
+        state (Optional[ThreadState]): The optional thread state. Defaults to None.
 
     Returns:
         Thread: The API model representation of the thread.
     """
-    # If thread["states"] is not None and not emty,get the values property of the first element
-    # else set it to None
+
     values = None
-    if thread.get("states") and len(thread["states"]) > 0:
-        values = thread["states"][0].get("values")
+    if state is not None and len(state) > 0:
+        values = state["values"]
 
     return ApiThread(
         thread_id=thread["thread_id"],
@@ -96,16 +97,8 @@ class Threads:
         agent = agent_info.agent
 
         state = await agent.get_agent_state(thread_id)
-        if state is not None:
-            thread["states"] = [
-                {
-                    "checkpoint_id": state["checkpoint_id"],
-                    "values": state["values"],
-                    "metadata": state.get("metadata"),
-                }
-            ]
 
-        return _to_api_model(thread)
+        return _to_api_model(thread, state)
 
     @staticmethod
     async def create_thread(
@@ -143,7 +136,6 @@ class Threads:
             status=thread["status"],
             created_at=datetime.now(),
             updated_at=datetime.now(),
-            states=thread["states"],
         )
         # Save the new thread to the database
         copiedThread = DB.create_thread(new_thread)
@@ -158,10 +150,29 @@ class Threads:
 
     @staticmethod
     async def update_thread(thread_id: str, updates: dict) -> Optional[ApiThread]:
-        """Update a thread"""
+        """Update a thread and state"""
 
-        # TODO: TBD
-        return None
+        # Fetch the thread from the database
+        thread = DB.get_thread(thread_id)
+        if not thread:
+            logger.error(f"Thread with ID {thread_id} does not exist.")
+            return None
+
+        ## TODO: Other values comes from
+        processedUpdates = {
+            "metadata": updates.get("metadata", thread["metadata"]),
+        }
+
+        # Update the thread in the database
+        updated_thread = DB.update_thread(thread_id, processedUpdates)
+        if not updated_thread:
+            logger.error(f"Failed to update thread with ID {thread_id}.")
+            return None
+
+        ## TODO: Add await agent.update_agent_state(thread_id, state) call if we want to update inner state as well
+
+        # Fetch the updated thread from the database and its state from the agent
+        return await Threads.get_thread_by_id(thread_id)
 
     @staticmethod
     async def search(filters: dict) -> list[ApiThread]:

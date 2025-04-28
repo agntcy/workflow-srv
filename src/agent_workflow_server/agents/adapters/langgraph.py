@@ -15,7 +15,8 @@ from agent_workflow_server.agents.base import (
     ThreadsNotSupportedError,
 )
 from agent_workflow_server.services.message import Message
-from agent_workflow_server.storage.models import Run, ThreadState
+from agent_workflow_server.services.thread_state import ThreadState
+from agent_workflow_server.storage.models import Run
 
 
 class LangGraphAdapter(BaseAdapter):
@@ -121,3 +122,20 @@ class LangGraphAgent(BaseAgent):
                 raise e
 
         return history
+
+    async def update_agent_state(self, thread_id, state):
+        """Updates the thread state associated with the agent."""
+        config = RunnableConfig(configurable={"thread_id": thread_id}, tags=None)
+
+        try:
+            await self.agent.aupdate_state(
+                config=config,
+                values=state["values"],
+            )
+        except ValueError as e:
+            if str(e) == "No checkpointer set":
+                raise ThreadsNotSupportedError(
+                    "This agent does not support threads."
+                ) from e
+            else:
+                raise e

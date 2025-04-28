@@ -6,7 +6,8 @@ from typing import AsyncGenerator, List, Optional
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
 from agent_workflow_server.services.message import Message
-from agent_workflow_server.storage.models import Run, ThreadState
+from agent_workflow_server.services.thread_state import ThreadState
+from agent_workflow_server.storage.models import Run
 
 # Make sure that this and the one in the .env.test file are the same
 MOCK_AGENT_ID = "3f1e2549-5799-4321-91ae-2a4881d55526"
@@ -68,6 +69,12 @@ class MockAgent(BaseAgent):
                 )
             ]
         return []
+
+    # Mock update_agent_state
+    async def update_agent_state(
+        self, thread_id: str, state: ThreadState
+    ) -> Optional[ThreadState]:
+        return None
 
 
 class MockAdapter(BaseAdapter):
