@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List, Optional
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
 from agent_workflow_server.services.message import Message
-from agent_workflow_server.storage.models import Run
+from agent_workflow_server.storage.models import Run, ThreadState
 
 # Make sure that this and the one in the .env.test file are the same
 MOCK_AGENT_ID = "3f1e2549-5799-4321-91ae-2a4881d55526"
@@ -17,6 +17,8 @@ MOCK_RUN_OUTPUT = {"message": "The color of the sky is blue"}
 MOCK_RUN_INPUT_INTERRUPT = {"message": "Please interrupt"}
 MOCK_RUN_EVENT_INTERRUPT = "__mock_interrupt__"
 MOCK_RUN_OUTPUT_INTERRUPT = {"message": "How can I help you?"}
+
+MOCK_THREAD_ID = "3f1e2549-5799-4321-91ae-2a4881d55526"
 
 
 class MockAgentImpl: ...
@@ -40,6 +42,32 @@ class MockAgent(BaseAgent):
                 event=MOCK_RUN_EVENT_INTERRUPT,
                 data=MOCK_RUN_OUTPUT_INTERRUPT,
             )
+
+    # Mock get_agent_state
+    async def get_agent_state(self, thread_id: str) -> Optional[ThreadState]:
+        if thread_id == MOCK_THREAD_ID:
+            return ThreadState(
+                thread_id=MOCK_THREAD_ID,
+                state={"message": "The color of the sky is blue"},
+                created_at=MOCK_RUN_INPUT["created_at"],
+                updated_at=MOCK_RUN_INPUT["updated_at"],
+            )
+        return None
+
+    # Mock get_history
+    async def get_history(
+        self, thread_id: str, limit: int, before: int
+    ) -> List[ThreadState]:
+        if thread_id == MOCK_THREAD_ID:
+            return [
+                ThreadState(
+                    thread_id=MOCK_THREAD_ID,
+                    state={"message": "The color of the sky is blue"},
+                    created_at=MOCK_RUN_INPUT["created_at"],
+                    updated_at=MOCK_RUN_INPUT["updated_at"],
+                )
+            ]
+        return []
 
 
 class MockAdapter(BaseAdapter):
