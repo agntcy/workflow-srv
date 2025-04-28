@@ -1,6 +1,9 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import List, Optional
 from uuid import uuid4
 
 from agent_workflow_server.agents.load import AGENTS
