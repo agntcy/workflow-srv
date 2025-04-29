@@ -142,6 +142,20 @@ class Threads:
         # Save the new thread to the database
         copiedThread = DB.create_thread(new_thread)
 
+        ## TODO : Update this for multi agent support
+        agent_info = next(iter(AGENTS.values()))
+        agent = agent_info.agent
+
+        state = await agent.get_agent_state(thread_id)
+
+        if state:
+            # Copy the state to the new thread
+            copiedThreadState = ThreadState(
+                values=state["values"],
+            )
+            # Update the agent with the new thread state
+            await agent.update_agent_state(copiedThread["thread_id"], copiedThreadState)
+
         return _to_api_model(copiedThread)
 
     @staticmethod
