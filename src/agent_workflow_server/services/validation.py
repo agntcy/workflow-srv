@@ -55,24 +55,9 @@ def validate_output(run_id, agent_id: str, output: Any) -> None:
         )
 
 
-def validate_run_create(run_create: RunCreateStateless) -> RunCreateStateless:
-    """Validate RunCreate input against agent's descriptor schema"""
-    schemas = get_agent_schemas(run_create.agent_id)
-    if schemas["input"] and not run_create.input:
-        raise InvalidFormatException('"input" is required for this agent')
-    if schemas["config"] and not run_create.config:
-        raise InvalidFormatException('"config" is required for this agent')
-
-    if run_create.input:
-        validate_against_schema(run_create.input, schemas["input"])
-
-    if run_create.config and run_create.config.configurable:
-        validate_against_schema(run_create.config.configurable, schemas["config"])
-
-    return run_create
-
-
-def validate_run_create_stateful(run_create: RunCreateStateful) -> RunCreateStateful:
+def validate_run_create(
+    run_create: RunCreateStateless | RunCreateStateful,
+) -> RunCreateStateless | RunCreateStateful:
     """Validate RunCreate input against agent's descriptor schema"""
     schemas = get_agent_schemas(run_create.agent_id)
     if schemas["input"] and not run_create.input:

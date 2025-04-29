@@ -117,7 +117,6 @@ class Threads:
         ## Create new thread. If Value error raised (thread with given ID exists) return existing thread
         try:
             threadModel = _make_thread(threadCreate)
-            ## TODO proper status handling
             threadModel["status"] = "idle"
             newThread = DB.create_thread(threadModel)
         except ValueError:

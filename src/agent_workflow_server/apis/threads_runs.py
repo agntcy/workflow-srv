@@ -40,7 +40,7 @@ from agent_workflow_server.services.validation import (
     InvalidFormatException,
 )
 from agent_workflow_server.services.validation import (
-    validate_run_create_stateful as validate,
+    validate_run_create as validate,
 )
 
 from ..utils.tools import make_serializable
