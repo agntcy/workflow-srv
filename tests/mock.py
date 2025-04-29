@@ -78,7 +78,9 @@ class MockAgent(BaseAgent):
 
 
 class MockAdapter(BaseAdapter):
-    def load_agent(self, agent: object):
+    def load_agent(
+        self, agent: object, set_thread_persistance_flag: Optional[callable] = None
+    ):
         if isinstance(agent, MockAgentImpl):
             return MockAgent(agent)
 
