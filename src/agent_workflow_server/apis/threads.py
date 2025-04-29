@@ -197,7 +197,14 @@ async def patch_thread(
     thread_patch: ThreadPatch = Body(None, description=""),
 ) -> Thread:
     """Update a thread."""
-    thread = await Threads.update_thread(thread_id, thread_patch.to_dict())
+    try:
+        thread = await Threads.update_thread(thread_id, thread_patch.to_dict())
+    except ValueError as e:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Failed to update thread: {e}",
+        )
+    
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 

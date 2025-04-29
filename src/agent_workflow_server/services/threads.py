@@ -160,18 +160,34 @@ class Threads:
             logger.error(f"Thread with ID {thread_id} does not exist.")
             return None
 
-        ## TODO: Other values comes from
         processedUpdates = {
             "metadata": updates.get("metadata", thread["metadata"]),
         }
+        
+        # Inner updates
+        if "values" in updates and "checkpoint" in updates:
+            updatedState = ThreadState(
+                thread_id=thread_id,
+                checkpoint_id=updates["checkpoint"]["checkpoint_id"],
+                values=updates["values"],
+            )
+             ## TODO : Update this for multi agent support
+            agent_info = next(iter(AGENTS.values()))
+            agent = agent_info.agent
+
+            try:
+                await agent.update_agent_state(thread_id, updatedState)
+            except Exception as e:
+                logger.error(f"Failed to update agent state for thread {thread_id}: {e}")
+                raise ValueError(
+                    f"Failed to update agent state for thread {thread_id}: {e}"
+                )
 
         # Update the thread in the database
         updated_thread = DB.update_thread(thread_id, processedUpdates)
         if not updated_thread:
             logger.error(f"Failed to update thread with ID {thread_id}.")
             return None
-
-        ## TODO: Add await agent.update_agent_state(thread_id, state) call if we want to update inner state as well
 
         # Fetch the updated thread from the database and its state from the agent
         return await Threads.get_thread_by_id(thread_id)
