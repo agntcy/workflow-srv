@@ -1,6 +1,5 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
-
 import asyncio
 import logging
 import os
@@ -8,11 +7,9 @@ import signal
 import sys
 
 import uvicorn
-import uvicorn.logging
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, FastAPI
 
-import agent_workflow_server.logging.logger  # noqa: F401
 from agent_workflow_server.agents.load import load_agents
 from agent_workflow_server.apis.agents import public_router as PublicAgentsApiRouter
 from agent_workflow_server.apis.agents import router as AgentsApiRouter
@@ -25,10 +22,12 @@ from agent_workflow_server.apis.threads import router as ThreadsApiRouter
 from agent_workflow_server.apis.threads_runs import router as ThreadRunsApiRouter
 from agent_workflow_server.services.queue import start_workers
 
-load_dotenv()
+load_dotenv(dotenv_path=find_dotenv(usecwd=True))
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
+DEFAULT_NUM_WORKERS = 5
+DEFAULT_AGENT_MANIFEST_PATH = "manifest.json"
 
 logger = logging.getLogger(__name__)
 
@@ -71,14 +70,20 @@ def start():
     try:
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-        load_agents()
-        n_workers = int(os.environ.get("NUM_WORKERS", 5))
+
+        agents_ref = os.getenv("AGENTS_REF", None)
+        agent_manifest_path = os.getenv(
+            "AGENT_MANIFEST_PATH", DEFAULT_AGENT_MANIFEST_PATH
+        )
+        load_agents(agents_ref, agent_manifest_path)
+        n_workers = int(os.environ.get("NUM_WORKERS", DEFAULT_NUM_WORKERS))
 
         loop = asyncio.get_event_loop()
         loop.create_task(start_workers(n_workers))
 
+        # use module import method to support reload argument
         config = uvicorn.Config(
-            app,
+            "agent_workflow_server.main:app",
             host=os.getenv("API_HOST", DEFAULT_HOST) or DEFAULT_HOST,
             port=int(os.getenv("API_PORT", DEFAULT_PORT)) or DEFAULT_PORT,
             loop="asyncio",

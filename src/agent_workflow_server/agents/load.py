@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import pkgutil
-from typing import Any, Dict, Hashable, List, Mapping, NamedTuple
+from typing import Any, Dict, Hashable, List, Mapping, NamedTuple, Optional
 
 import agent_workflow_server.agents.adapters
 from agent_workflow_server.agents.oas_generator import generate_agent_oapi
@@ -71,7 +71,9 @@ def _read_manifest(path: str) -> AgentACPDescriptor:
         return AgentACPDescriptor(**manifest_data)
 
 
-def _resolve_agent(name: str, path: str) -> AgentInfo:
+def _resolve_agent(
+    name: str, path: str, add_manifest_paths: List[str] = []
+) -> AgentInfo:
     if ":" not in path:
         raise ValueError(
             f"""Invalid format for AGENTS_REF environment variable. \
@@ -128,8 +130,7 @@ Check that the module name and export symbol in 'AGENTS_REF' env variable are co
     # Load manifest. Check in paths below (in order)
     manifest_paths = [
         os.path.join(os.path.dirname(module.__file__), "manifest.json"),
-        os.environ.get("AGENT_MANIFEST_PATH", "manifest.json") or "manifest.json",
-    ]
+    ] + add_manifest_paths
 
     for manifest_path in manifest_paths:
         manifest = _read_manifest(manifest_path)
@@ -151,18 +152,16 @@ Check that the module name and export symbol in 'AGENTS_REF' env variable are co
     return AgentInfo(agent=agent, manifest=manifest, schema=schema)
 
 
-def load_agents():
-    # Simulate loading the config from environment variable
-
+def load_agents(agents_ref: Optional[str] = None, add_manifest_paths: List[str] = []):
     try:
-        config: Dict[str, str] = json.loads(os.getenv("AGENTS_REF", {}))
+        config: Dict[str, str] = json.loads(agents_ref) if agents_ref else {}
     except json.JSONDecodeError:
         raise ValueError("""Invalid format for AGENTS_REF environment variable. \
 Must be a dictionary of agent_id -> module:var pairs. \
 Example: {"agent1": "agent1_module:agent1_var", "agent2": "agent2_module:agent2_var"}""")
     for agent_id, agent_path in config.items():
         try:
-            agent = _resolve_agent(agent_id, agent_path)
+            agent = _resolve_agent(agent_id, agent_path, add_manifest_paths)
             AGENTS[agent_id] = agent
             logger.info(f"Registered Agent: '{agent_id}'", {"agent_id": agent_id})
         except Exception as e:

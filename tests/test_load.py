@@ -1,5 +1,6 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
+import os
 
 import pytest
 from pytest_mock import MockerFixture
@@ -21,10 +22,16 @@ from tests.mock import (
 )
 
 
+def _env_load_agents():
+    agent_ref = os.getenv("AGENTS_REF")
+    manifest_path = os.getenv("AGENT_MANIFEST_PATH")
+    load_agents(agents_ref=agent_ref, add_manifest_paths=[manifest_path])
+
+
 def test_load_agents(mocker: MockerFixture):
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
-    load_agents()
+    _env_load_agents()
 
     assert len(AGENTS) == 1
     assert isinstance(AGENTS[MOCK_AGENT_ID].agent, MockAgent)
@@ -37,7 +44,7 @@ def test_load_agents(mocker: MockerFixture):
 def test_get_agent_info(mocker: MockerFixture, agent_id: str, expected: bool):
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
-    load_agents()
+    _env_load_agents()
 
     assert len(AGENTS) == 1
 
@@ -55,7 +62,7 @@ def test_get_agent_info(mocker: MockerFixture, agent_id: str, expected: bool):
 def test_get_agent(mocker: MockerFixture, agent_id: str, expected: bool):
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
-    load_agents()
+    _env_load_agents()
 
     assert len(AGENTS) == 1
 
@@ -87,7 +94,7 @@ def test_search_agents(
 ):
     mocker.patch("agent_workflow_server.agents.load.ADAPTERS", [MockAdapter()])
 
-    load_agents()
+    _env_load_agents()
 
     assert len(AGENTS) == 1
 

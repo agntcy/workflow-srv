@@ -101,7 +101,6 @@ async def worker(worker_id: int):
                 last_message = None
                 async for message in stream:
                     message.data = make_serializable(message.data)
-                    await Runs.Stream.publish(run_id, message)
                     last_message = message
                     if last_message.type == "interrupt":
                         log_run(
@@ -110,7 +109,10 @@ async def worker(worker_id: int):
                             "interrupted",
                             message_data=json.dumps(message.data),
                         )
+                        await Runs.Stream.publish(run_id, message)
                         break
+                    else:
+                        await Runs.Stream.publish(run_id, message)
             except Exception as error:
                 await Runs.Stream.publish(
                     run_id, Message(type="message", data=(str(error)))
@@ -134,7 +136,6 @@ async def worker(worker_id: int):
                 )
                 validate_output(run_id, run["agent_id"], last_message.data)
                 DB.add_run_output(run_id, last_message.data)
-                await Runs.Stream.publish(run_id, Message(type="control", data="done"))
                 if last_message.type == "interrupt":
                     interrupt = Interrupt(
                         event=last_message.event, ai_data=last_message.data
@@ -144,12 +145,13 @@ async def worker(worker_id: int):
                 else:
                     await Runs.set_status(run_id, "success")
                 log_run(worker_id, run_id, "succeeded", **run_stats(run_info))
+                await Runs.Stream.publish(run_id, Message(type="control", data="done"))
 
             except InvalidFormatException as error:
+                log_run(worker_id, run_id, "failed")
                 await Runs.Stream.publish(
                     run_id, Message(type="message", data=str(error))
                 )
-                log_run(worker_id, run_id, "failed")
                 raise RunError(str(error))
 
         except AttemptsExceededError:

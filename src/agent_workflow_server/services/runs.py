@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from itertools import islice
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
 from uuid import uuid4
 
 from agent_workflow_server.generated.models.run_create_stateless import (
@@ -17,6 +17,12 @@ from agent_workflow_server.generated.models.run_search_request import (
 )
 from agent_workflow_server.generated.models.run_stateless import (
     RunStateless as ApiRun,
+)
+from agent_workflow_server.generated.models.stream_event_payload import (
+    StreamEventPayload,
+)
+from agent_workflow_server.generated.models.value_run_result_update import (
+    ValueRunResultUpdate,
 )
 from agent_workflow_server.services.threads import Threads
 from agent_workflow_server.storage.models import Run, RunInfo, RunStatus
@@ -247,6 +253,37 @@ class Runs:
 
         return None, None
 
+    @staticmethod
+    async def stream_events(run_id: str) -> AsyncIterator[StreamEventPayload | None]:
+        async for message in Runs.Stream.join(run_id):
+            msg_data = message.data
+
+            if message.type == "control":
+                if message.data == "done":
+                    break
+                elif message.data == "timeout":
+                    yield None
+                    continue
+                else:
+                    logger.error(
+                        f'received unknown control message "{message.data}" in stream events for run: {run_id}'
+                    )
+                    continue
+
+            # We need to get the latest value to return
+            run = DB.get_run(run_id)
+            if run is None:
+                raise ValueError(f"Run {run_id} not found")
+
+            yield StreamEventPayload(
+                ValueRunResultUpdate(
+                    type="values",
+                    run_id=run["run_id"],
+                    status=run["status"],
+                    values=msg_data,
+                )
+            )
+
     class Stream:
         @staticmethod
         async def publish(run_id: str, message: Message) -> None:
@@ -263,11 +300,21 @@ class Runs:
             run_id: str,
         ) -> AsyncGenerator[Message, None]:
             queue = await Runs.Stream.subscribe(run_id)
+
+            # Check after subscribe whether the run is completed to
+            # avoid race condition.
+            run = DB.get_run(run_id)
+            if run is None:
+                raise ValueError(f"Run {run_id} not found")
+            if run["status"] != "pending" and queue.empty():
+                return
+
             while True:
                 try:
-                    message: Message = await asyncio.wait_for(queue.get(), timeout=1)
-                    if message.topic == "control" and message.data == "done":
-                        break
+                    message: Message = await asyncio.wait_for(queue.get(), timeout=10)
                     yield message
+                    if message.type == "control" and message.data == "done":
+                        break
                 except TimeoutError as error:
                     logger.error(f"Timeout waiting for run {run_id}: {error}")
+                    yield Message(type="control", data="timeout")
