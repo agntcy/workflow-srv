@@ -4,6 +4,7 @@
 from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.constants import INTERRUPT
 from langgraph.graph.graph import CompiledGraph, Graph
 from langgraph.graph.state import CompiledStateGraph
@@ -20,10 +21,17 @@ from agent_workflow_server.storage.models import Run
 
 
 class LangGraphAdapter(BaseAdapter):
-    def load_agent(self, agent: object) -> Optional[BaseAgent]:
+    def load_agent(
+        self, agent: object, set_thread_persistance_flag: Optional[callable]
+    ) -> Optional[BaseAgent]:
         if isinstance(agent, Graph):
             return LangGraphAgent(agent.compile())
         elif isinstance(agent, CompiledGraph):
+            if set_thread_persistance_flag is not None:
+                set_thread_persistance_flag(
+                    isinstance(agent.checkpointer, PostgresSaver)
+                )
+
             return LangGraphAgent(agent)
         return None
 

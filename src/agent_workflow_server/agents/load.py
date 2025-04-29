@@ -17,6 +17,7 @@ from agent_workflow_server.generated.models.agent_acp_descriptor import (
 from agent_workflow_server.generated.models.agent_search_request import (
     AgentSearchRequest,
 )
+from agent_workflow_server.storage.storage import DB
 
 from .base import BaseAdapter, BaseAgent
 
@@ -111,7 +112,7 @@ Check that file path in 'AGENTS_REF' env variable is correct."""
 
         agent = None
         for adapter in ADAPTERS:
-            agent = adapter.load_agent(resolved)
+            agent = adapter.load_agent(resolved, DB.set_persist_threads)
             if agent is not None:
                 break
         else:
