@@ -402,3 +402,91 @@ def test_validate_run_create_complex_schema_invalid():
         # Should fail validation
         with pytest.raises(InvalidFormatException):
             validate_run_create(run_create)
+
+def test_validate_run_create_complex_schema_additional_properties_fail():
+    """Test validation with complex nested structures and array validations"""
+    # Complex run with nested structures and arrays
+    run_create = RunCreateStateful(
+        agent_id="complex-agent",
+        input={
+            "echo_input": {
+                "messages": [
+                    {
+                        "type": "human",
+                        "content": "Hello I'm a developer"
+                    }
+                ]
+            }
+        },
+        config={
+            "configurable": {
+                "to_upper": "false",
+                "to_lower": "false"
+                }
+        },
+    )
+    complex_input_schema = {
+        "$defs": {
+            "Message": {
+                "properties": {
+                    "type": {
+                        "$ref": "#/$defs/Type",
+                        "description": "indicates the originator of the message, a human or an assistant"
+                        },
+                    "content": {
+                        "description": "the content of the message",
+                        "title": "Content",
+                        "type": "string"
+                        }
+                },
+                "required": [
+                    "type",
+                    "content"
+                ],
+                "title": "Message",
+                "type": "object"
+            },
+            "Type": {
+                "enum": [
+                    "human",
+                    "assistant",
+                    "ai"
+                ],
+                "title": "Type",
+                "type": "string"
+            }
+        },
+        "properties": {
+            "message": {
+                "anyOf": [
+                    {
+                    "items": {
+                        "$ref": "#/$defs/Message"
+                    },
+                    "type": "array"
+                    },
+                    {
+                    "type": "null"
+                    }
+                ],
+            "default": "null",
+            "title": "Messages"
+            }
+        },
+        "additionalProperties": False,
+        "title": "InputState",
+        "type": "object"
+    }
+
+    with mock.patch(
+        "agent_workflow_server.services.validation.get_agent_schemas"
+    ) as mock_get_schemas:
+        mock_get_schemas.return_value = {
+            "input": complex_input_schema,
+            "output": {},
+            "config": {},
+        }
+
+        # Should fail validation
+        with pytest.raises(InvalidFormatException):
+            validate_run_create(run_create)
