@@ -76,3 +76,12 @@ class LlamaIndexAgent(BaseAgent):
             type="message",
             data=final_result,
         )
+
+    async def get_agent_state(self, thread_id):
+        pass
+
+    async def get_history(self, thread_id, limit, before):
+        pass
+
+    async def update_agent_state(self, thread_id, state):
+        pass
