@@ -40,7 +40,7 @@ class LlamaIndexAgent(BaseAgent):
 
         handler = self.agent.run(
             ctx=Context.from_dict(self.agent, ctx_data) if ctx_data else None,
-            input={**input},
+            **input,
         )
         if handler.ctx is None:
             # This should never happen, workflow.run actually sets the Context
