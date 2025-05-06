@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
-from typing import Dict, Optional
+import json
+from typing import Dict, List, Optional
 
 from llama_index.core.workflow import (
     Context,
@@ -13,6 +14,7 @@ from llama_index.core.workflow import (
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
 from agent_workflow_server.services.message import Message
+from agent_workflow_server.services.thread_state import ThreadState
 from agent_workflow_server.storage.models import Run
 
 
@@ -78,7 +80,39 @@ class LlamaIndexAgent(BaseAgent):
         )
 
     async def get_agent_state(self, thread_id):
-        pass
+        ctx_data = self.contexts.get(thread_id)
+        ## Get the broker_log vale of the context if it exists
+        if ctx_data and "broker_log" in ctx_data:
+            broker_log = ctx_data["broker_log"]
+            ## Get the last value from the broker_log
+            if broker_log and isinstance(broker_log, List):
+                last_broker_log = broker_log[-1]
+
+                ## Check if the last_broker_log exists and is a string
+                if last_broker_log and isinstance(last_broker_log, str):
+                    try:
+                        # Parse the JSON string
+                        parsed_data = json.loads(last_broker_log)
+                        # Check if it's a Pydantic model serialization
+                        if isinstance(parsed_data, dict) and parsed_data.get(
+                            "__is_pydantic"
+                        ):
+                            # Return the "value" field of the Pydantic model
+                            threadStateValue = parsed_data.get("value")
+
+                            if threadStateValue:
+                                return ThreadState(
+                                    thread_id=thread_id,
+                                    values=threadStateValue,
+                                )
+                        else:
+                            # If its not a pydantic return None
+                            return None
+                    except json.JSONDecodeError:
+                        # If it's not valid JSON, return None
+                        return None
+
+        return None
 
     async def get_history(self, thread_id, limit, before):
         pass
