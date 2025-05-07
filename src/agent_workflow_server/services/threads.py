@@ -214,6 +214,18 @@ class Threads:
         """Search for threads based on filters"""
         threads = DB.search_thread(filters)
         return [_to_api_model(thread) for thread in threads]
+    
+    @staticmethod
+    async def delete_thread(thread_id: str) -> bool:
+        """Delete a thread"""
+        # Check if the thread has pending runs
+        if await Threads.check_pending_runs(thread_id):
+            raise PendingRunError(
+                f"Thread with ID {thread_id} has pending runs and cannot be deleted."
+            )
+
+        # Delete the thread from the database
+        return DB.delete_thread(thread_id)
 
     @staticmethod
     async def get_history(

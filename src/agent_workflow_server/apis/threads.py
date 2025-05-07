@@ -161,7 +161,7 @@ async def get_thread_history(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(
         ..., description="The ID of the thread."
     ),
-    limit: Optional[StrictInt] = Query(10, description="", alias="limit"),
+    limit: Optional[int] = Query(10, description="", alias="limit"),
     before: Optional[StrictStr] = Query(None, description="", alias="before"),
 ) -> List[ThreadState]:
     """Get all past states for a thread."""
