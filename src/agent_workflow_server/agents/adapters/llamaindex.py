@@ -80,11 +80,17 @@ class LlamaIndexAgent(BaseAgent):
         )
 
     async def get_agent_state(self, thread_id):
+        """
+        Note: The broker_log is a List[Event] in the Context class.
+        It contais a list of events that are generated during the workflow execution.
+        If these are pydantic models, they will be serialized to JSON strings.
+        The last item in the broker_log is the most recent event.
+        """
         ctx_data = self.contexts.get(thread_id)
         ## Get the broker_log vale of the context if it exists
         if ctx_data and "broker_log" in ctx_data:
             broker_log = ctx_data["broker_log"]
-            ## Get the last value from the broker_log
+            # if broker_log exists and is a list, get the last item
             if broker_log and isinstance(broker_log, List):
                 last_broker_log = broker_log[-1]
 
@@ -98,11 +104,11 @@ class LlamaIndexAgent(BaseAgent):
                             "__is_pydantic"
                         ):
                             # Return the "value" field of the Pydantic model
+                            # The content of this is defined by the Agent
                             threadStateValue = parsed_data.get("value")
 
                             if threadStateValue:
                                 return ThreadState(
-                                    thread_id=thread_id,
                                     values=threadStateValue,
                                 )
                         else:
@@ -115,7 +121,50 @@ class LlamaIndexAgent(BaseAgent):
         return None
 
     async def get_history(self, thread_id, limit, before):
-        pass
+        '''
+        Note: See note in get_agent_state
+        '''
+        # Get context data for the given thread_id
+        ctx_data = self.contexts.get(thread_id)
+        # If context data exists, check for broker_log
+        if ctx_data and "broker_log" in ctx_data:
+            broker_log = ctx_data["broker_log"]
+            # If broker_log exists and is a list, return the last 'limit' items
+            if broker_log and isinstance(broker_log, List):
+                # Return the last 'limit' items from the broker_log
+                log_items = broker_log[-limit:]
+                # If 'before' is provided, filter the log items
+                if before:
+                    log_items = [item for item in log_items if item < before]
+
+                # Parse each log item as JSON to ThreadState
+                parsed_log_items = []
+                for item in log_items:
+                    # Check if the item is a string
+                    if isinstance(item, str):
+                        # Parse the JSON string
+                        # Check if the item is a Pydantic model serialization
+                        try:
+                            parsed_data = json.loads(item)
+                            if isinstance(parsed_data, dict) and parsed_data.get(
+                                "__is_pydantic"
+                            ):
+                                threadStateValue = parsed_data.get("value")
+                                if threadStateValue:
+                                    parsed_log_items.append(
+                                        ThreadState(
+                                            values=threadStateValue,
+                                            checkpoint_id="",
+                                        )
+                                    )
+                        except json.JSONDecodeError:
+                            # If it's not valid JSON, skip this item
+                            continue
+
+                return parsed_log_items
+
+        # If no context data or broker_log exists, return an empty list
+        return []
 
     async def update_agent_state(self, thread_id, state):
         pass
