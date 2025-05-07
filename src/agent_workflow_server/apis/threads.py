@@ -13,7 +13,7 @@ from fastapi import (
     Query,
     status,
 )
-from pydantic import Field, StrictInt, StrictStr
+from pydantic import Field, StrictStr
 from typing_extensions import Annotated
 
 from agent_workflow_server.agents.base import ThreadsNotSupportedError
@@ -232,4 +232,6 @@ async def search_threads(
     if thread_search_request.status:
         filters["status"] = thread_search_request.status
 
-    return await Threads.search(filters, thread_search_request.limit, thread_search_request.offset)
+    return await Threads.search(
+        filters, thread_search_request.limit, thread_search_request.offset
+    )

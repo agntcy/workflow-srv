@@ -216,7 +216,7 @@ class Threads:
         # Apply limit and offset
         threads = threads[offset : offset + limit]
         return [_to_api_model(thread) for thread in threads]
-    
+
     @staticmethod
     async def delete_thread(thread_id: str) -> bool:
         """Delete a thread"""
