@@ -210,7 +210,7 @@ class Threads:
         return await Threads.get_thread_by_id(thread_id)
 
     @staticmethod
-    async def search(filters: dict, limit: Optional[int], offset: Optional[int]) -> list[ApiThread]:
+    async def search(filters: dict, limit: Optional[int]=None, offset: Optional[int]=None) -> list[ApiThread]:
         """Search for threads based on filters"""
         threads = DB.search_thread(filters)
         # Apply limit and offset

@@ -58,6 +58,27 @@ def mock_thread():
         "updated_at": datetime.now(),
     }
     DB.create_thread(thread)
+
+    thread_id2 = str(uuid4())
+    thread2 = {
+        "thread_id": thread_id2,
+        "metadata": {"key": "value2"},
+        "status": "busy",
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+    }
+    DB.create_thread(thread2)
+    
+    thread_id3 = str(uuid4())
+    thread3 = {
+        "thread_id": thread_id3,
+        "metadata": {"key": "value3"},
+        "status": "idle",
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+    }
+    DB.create_thread(thread3)
+
     return thread
 
 
@@ -173,10 +194,21 @@ async def test_update_thread(mock_thread, mock_agent):
 
 @pytest.mark.asyncio
 async def test_search(mock_thread):
-    # Test searching for threads
-    threads = await Threads.search(filters ={"status": "idle"}, limit=10, offset=0)
+    threads = await Threads.search(filters ={"status": "idle"})
     assert len(threads) >= 1
     assert any(t.thread_id == mock_thread["thread_id"] for t in threads)
+
+    # Test searching for threads
+    threads = await Threads.search(filters ={"status": "idle"}, limit=2, offset=0)
+    assert len(threads) >= 1
+    assert len(threads) <= 2
+    assert any(t.thread_id == mock_thread["thread_id"] for t in threads)
+
+      # Test searching for threads
+    threads = await Threads.search(filters ={"status": "idle"}, limit=2, offset=1)
+    assert len(threads) == 1
+
+   
 
     # Test searching with no matches
     threads = await Threads.search(filters ={"status": "nonexistent_status"}, limit=10, offset=0)
