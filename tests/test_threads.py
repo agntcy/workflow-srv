@@ -174,12 +174,12 @@ async def test_update_thread(mock_thread, mock_agent):
 @pytest.mark.asyncio
 async def test_search(mock_thread):
     # Test searching for threads
-    threads = await Threads.search({"status": "idle"})
+    threads = await Threads.search(filters ={"status": "idle"}, limit=10, offset=0)
     assert len(threads) >= 1
     assert any(t.thread_id == mock_thread["thread_id"] for t in threads)
 
     # Test searching with no matches
-    threads = await Threads.search({"status": "nonexistent_status"})
+    threads = await Threads.search(filters ={"status": "nonexistent_status"}, limit=10, offset=0)
     assert len(threads) == 0
 
 
