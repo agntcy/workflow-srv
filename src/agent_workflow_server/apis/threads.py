@@ -223,4 +223,13 @@ async def search_threads(
     thread_search_request: ThreadSearchRequest = Body(None, description=""),
 ) -> List[Thread]:
     """Search for threads.  This endpoint also functions as the endpoint to list all threads."""
-    return await Threads.search(thread_search_request)
+    ## Create filtes from metadata, values and status but only if they are not None
+    filters = {}
+    if thread_search_request.metadata:
+        filters["metadata"] = thread_search_request.metadata
+    if thread_search_request.values:
+        filters["values"] = thread_search_request.values
+    if thread_search_request.status:
+        filters["status"] = thread_search_request.status
+
+    return await Threads.search(filters, thread_search_request.limit, thread_search_request.offset)
