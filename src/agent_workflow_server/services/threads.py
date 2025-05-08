@@ -154,7 +154,11 @@ class Threads:
                 values=state["values"],
             )
             # Update the agent with the new thread state
-            await agent.update_agent_state(copiedThread["thread_id"], copiedThreadState)
+            updatedState = await agent.update_agent_state(
+                copiedThread["thread_id"], copiedThreadState
+            )
+
+            return _to_api_model(copiedThread, updatedState)
 
         return _to_api_model(copiedThread)
 
@@ -210,7 +214,9 @@ class Threads:
         return await Threads.get_thread_by_id(thread_id)
 
     @staticmethod
-    async def search(filters: dict, limit: Optional[int]=None, offset: Optional[int]=None) -> list[ApiThread]:
+    async def search(
+        filters: dict, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> list[ApiThread]:
         """Search for threads based on filters"""
         threads = DB.search_thread(filters)
         # Apply limit and offset

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
-import json
 from typing import Dict, List, Optional
+from uuid import UUID, uuid4
 
 from llama_index.core.workflow import (
     Context,
@@ -11,11 +11,17 @@ from llama_index.core.workflow import (
     InputRequiredEvent,
     Workflow,
 )
+from pydantic import BaseModel
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.services.thread_state import ThreadState
 from agent_workflow_server.storage.models import Run
+
+
+class LlamaIndexCheckpoint(BaseModel):
+    checkpoint_id: UUID
+    context: Dict
 
 
 class LlamaIndexAdapter(BaseAdapter):
@@ -34,14 +40,17 @@ class LlamaIndexAdapter(BaseAdapter):
 class LlamaIndexAgent(BaseAgent):
     def __init__(self, agent: Workflow):
         self.agent = agent
-        self.contexts: Dict[str, Dict] = {}
+        self.checkpoints: Dict[str, List[LlamaIndexCheckpoint]] = {}
 
     async def astream(self, run: Run):
         input = run["input"]
-        ctx_data = self.contexts.get(run["thread_id"])
+        checkpoints = self.checkpoints.get(run["thread_id"])
+        last_checkpoint = checkpoints[-1] if checkpoints else None
 
         handler = self.agent.run(
-            ctx=Context.from_dict(self.agent, ctx_data) if ctx_data else None,
+            ctx=Context.from_dict(self.agent, last_checkpoint.context)
+            if last_checkpoint and last_checkpoint.context
+            else None,
             **input,
         )
         if handler.ctx is None:
@@ -61,7 +70,15 @@ class LlamaIndexAgent(BaseAgent):
             handler.ctx.send_event(HumanResponseEvent(response=user_data))
 
         async for event in handler.stream_events():
-            self.contexts[run["thread_id"]] = handler.ctx.to_dict()
+            if checkpoints is None:
+                checkpoints = []
+
+            checkpoints.append(
+                LlamaIndexCheckpoint(
+                    checkpoint_id=uuid4(),
+                    context=handler.ctx.to_dict(),
+                )
+            )
             if isinstance(event, InputRequiredEvent):
                 # Send the interrupt
                 await handler.cancel_run()
@@ -73,98 +90,81 @@ class LlamaIndexAgent(BaseAgent):
                     data=event,
                 )
         final_result = await handler
-        self.contexts[run["thread_id"]] = handler.ctx.to_dict()
+        checkpoints.append(
+            LlamaIndexCheckpoint(
+                checkpoint_id=uuid4(),
+                context=handler.ctx.to_dict(),
+            )
+        )
+        self.checkpoints[run["thread_id"]] = checkpoints
         yield Message(
             type="message",
             data=final_result,
         )
 
     async def get_agent_state(self, thread_id):
-        """
-        Note: The broker_log is a List[Event] in the Context class.
-        It contais a list of events that are generated during the workflow execution.
-        If these are pydantic models, they will be serialized to JSON strings.
-        The last item in the broker_log is the most recent event.
-        """
-        ctx_data = self.contexts.get(thread_id)
-        ## Get the broker_log vale of the context if it exists
-        if ctx_data and "broker_log" in ctx_data:
-            broker_log = ctx_data["broker_log"]
-            # if broker_log exists and is a list, get the last item
-            if broker_log and isinstance(broker_log, List):
-                last_broker_log = broker_log[-1]
+        checkpoints = self.checkpoints.get(thread_id)
+        # If there are no checkpoints, return None
+        if not checkpoints:
+            return None
 
-                ## Check if the last_broker_log exists and is a string
-                if last_broker_log and isinstance(last_broker_log, str):
-                    try:
-                        # Parse the JSON string
-                        parsed_data = json.loads(last_broker_log)
-                        # Check if it's a Pydantic model serialization
-                        if isinstance(parsed_data, dict) and parsed_data.get(
-                            "__is_pydantic"
-                        ):
-                            # Return the "value" field of the Pydantic model
-                            # The content of this is defined by the Agent
-                            threadStateValue = parsed_data.get("value")
-
-                            if threadStateValue:
-                                return ThreadState(
-                                    values=threadStateValue,
-                                )
-                        else:
-                            # If its not a pydantic return None
-                            return None
-                    except json.JSONDecodeError:
-                        # If it's not valid JSON, return None
-                        return None
-
-        return None
+        # Get the last checkpoint
+        last_checkpoint = checkpoints[-1]
+        # If the last checkpoint has a context, return its values
+        return ThreadState(
+            values=last_checkpoint.context,
+            checkpoint_id=last_checkpoint.checkpoint_id,
+        )
 
     async def get_history(self, thread_id, limit, before):
-        '''
-        Note: See note in get_agent_state
-        '''
-        # Get context data for the given thread_id
-        ctx_data = self.contexts.get(thread_id)
-        # If context data exists, check for broker_log
-        if ctx_data and "broker_log" in ctx_data:
-            broker_log = ctx_data["broker_log"]
-            # If broker_log exists and is a list, return the last 'limit' items
-            if broker_log and isinstance(broker_log, List):
-                # Return the last 'limit' items from the broker_log
-                log_items = broker_log[-limit:]
-                # If 'before' is provided, filter the log items
-                if before:
-                    log_items = [item for item in log_items if item < before]
+        checkpoints = self.checkpoints.get(thread_id)
+        # If there are no checkpoints, return empty list
+        if not checkpoints:
+            return []
 
-                # Parse each log item as JSON to ThreadState
-                parsed_log_items = []
-                for item in log_items:
-                    # Check if the item is a string
-                    if isinstance(item, str):
-                        # Parse the JSON string
-                        # Check if the item is a Pydantic model serialization
-                        try:
-                            parsed_data = json.loads(item)
-                            if isinstance(parsed_data, dict) and parsed_data.get(
-                                "__is_pydantic"
-                            ):
-                                threadStateValue = parsed_data.get("value")
-                                if threadStateValue:
-                                    parsed_log_items.append(
-                                        ThreadState(
-                                            values=threadStateValue,
-                                            checkpoint_id="",
-                                        )
-                                    )
-                        except json.JSONDecodeError:
-                            # If it's not valid JSON, skip this item
-                            continue
+        # If before is not None, filter the checkpoints
+        if before:
+            checkpoints = [
+                checkpoint
+                for checkpoint in checkpoints
+                if checkpoint.checkpoint_id < before
+            ]
+        # If limit is not None, limit the number of checkpoints
+        if limit:
+            checkpoints = checkpoints[:limit]
 
-                return parsed_log_items
+        # Convert the checkpoints to a list of ThreadState objects
+        history = [
+            ThreadState(
+                values=checkpoint.context, checkpoint_id=str(checkpoint.checkpoint_id)
+            )
+            for checkpoint in checkpoints
+        ]
 
-        # If no context data or broker_log exists, return an empty list
-        return []
+        return history
 
     async def update_agent_state(self, thread_id, state):
-        pass
+        # Check is state value can be converted to a Context
+        try:
+            ctx = Context.from_dict(self.agent, state["values"])
+        except Exception as e:
+            raise ValueError(
+                f"Failed to update agent state for thread {thread_id}: {e}"
+            )
+
+        # Get the checkpoints for the thread
+        checkpoints = self.checkpoints.get(thread_id)
+        # If there are no checkpoints, create a new list
+        if checkpoints is None:
+            checkpoints = []
+
+        # Append the new checkpoint to the list of checkpoints
+        checkpoints.append(
+            LlamaIndexCheckpoint(
+                checkpoint_id=uuid4(),
+                context=ctx.to_dict(),
+            )
+        )
+        self.checkpoints[thread_id] = checkpoints
+
+        return await self.get_agent_state(thread_id)

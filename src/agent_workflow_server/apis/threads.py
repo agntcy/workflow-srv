@@ -208,6 +208,8 @@ async def patch_thread(
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
+    return thread
+
 
 @router.post(
     "/threads/search",
