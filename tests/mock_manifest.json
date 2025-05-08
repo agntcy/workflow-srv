@@ -82,7 +82,8 @@
                 "name": "src",
                 "url": "some_url.git",
                 "framework_config": {
-                    "framework_type": "a_framework",
+                    "framework_type": "langgraph",
+                    "graph": "mock_graph",
                     "mock_agent": "tests.mock:mock_agent"
                 }
             }

@@ -45,6 +45,6 @@ async def stream_run(run: Run) -> AsyncGenerator[Message, None]:
     async for message in agent.astream(run=run):
         if message.type == "interrupt":
             message = _insert_interrupt_name(
-                agent_info.manifest.specs.interrupts, message
+                agent_info.acp_descriptor.specs.interrupts, message
             )
         yield message

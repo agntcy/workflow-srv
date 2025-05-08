@@ -70,7 +70,7 @@ def test_get_agent(mocker: MockerFixture, agent_id: str, expected: bool):
         agent = get_agent(agent_id)
         assert expected
         assert agent.agent_id == agent_id
-        assert agent.metadata == AGENTS[agent_id].manifest.metadata
+        assert agent.metadata == AGENTS[agent_id].acp_descriptor.metadata
     except Exception:
         assert not expected
 

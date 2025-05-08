@@ -45,7 +45,7 @@ def get_agent_schemas(agent_id: str):
     if not agent_info:
         raise ValueError(f"Agent {agent_id} not found")
 
-    specs = agent_info.manifest.specs
+    specs = agent_info.acp_descriptor.specs
     return {
         "input": specs.input,
         "output": specs.output,

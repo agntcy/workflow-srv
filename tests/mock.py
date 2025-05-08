@@ -6,6 +6,7 @@ import json
 from typing import AsyncGenerator, List, Optional
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
+from agent_workflow_server.generated.manifest.models.agent_manifest import AgentManifest
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.services.thread_state import ThreadState
 from agent_workflow_server.storage.models import Run
@@ -94,7 +95,10 @@ class MockAgent(BaseAgent):
 
 class MockAdapter(BaseAdapter):
     def load_agent(
-        self, agent: object, set_thread_persistance_flag: Optional[callable] = None
+        self,
+        agent: object,
+        manifest: AgentManifest,
+        set_thread_persistance_flag: Optional[callable] = None,
     ):
         if isinstance(agent, MockAgentImpl):
             return MockAgent(agent)

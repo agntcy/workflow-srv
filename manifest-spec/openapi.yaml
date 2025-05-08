@@ -1,0 +1,294 @@
+openapi: 3.1.1
+info:
+  title: Agent Manifest Definition
+  version: '0.1'
+paths: {}
+components:
+  schemas:
+    AgentManifest:
+      title: Agent Manifest
+      description: >-
+        Describe all the ACP specs of an agent, including schemas and protocol
+        features.
+      type: object
+      properties:
+        metadata:
+          $ref: '../acp-spec/openapi.json#/components/schemas/AgentMetadata'
+        specs:
+          $ref: '../acp-spec/openapi.json#/components/schemas/AgentACPSpec'
+        deployment:
+          $ref: '#/components/schemas/AgentDeployment'
+      required:
+        - metadata
+        - specs
+    AgentDeployment:
+      title: Agent Workflow Server Deployment Manifest
+      description: >-
+        Describe all the details needed to deploy an agent by the Agent Workflow Server
+      type: object
+      properties:
+        deployment_options:
+          title: Deployment Options
+          description: >-
+            List of possible methods to instantiate or consume the agent.  Any
+            of the available option could be used.
+            
+            Every option could be associated with a unique name within this
+            agent. If present, when another manifest refers to this manifest, it
+            can also select the preferred deployment option.
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/SourceCodeDeployment'
+              - $ref: '#/components/schemas/RemoteServiceDeployment'
+              - $ref: '#/components/schemas/DockerDeployment'
+            discriminator:
+              propertyName: type
+              mapping:
+                source_code: '#/components/schemas/SourceCodeDeployment'
+                remote_service: '#/components/schemas/RemoteServiceDeployment'
+                docker: '#/components/schemas/DockerDeployment'
+        env_vars:
+          title: Environment Variables
+          description: >-
+            List of possible environment variables that the agent may require to be set
+            before it can be used.
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvVar'                 
+        dependencies:
+          title: Agent Dependencies
+          description: List of all other agents this agent depends on
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentDependency'
+      required:
+        - deployment_options
+    AgentDependency:
+      title: Agent Reference
+      description: >-
+        Reference to an Agent Record in the Agent Directory, it includes name,
+        version and a locator.
+      type: object
+      properties:
+        name:
+          description: Name of the agent dependency
+          title: Name
+          type: string
+        ref:
+          description: >-
+            Reference to the agent in the agent directory. It includes the
+            version and the locator.
+          $ref: '../acp-spec/openapi.json#/components/schemas/AgentRef'
+        deployment_option:
+          description: >-
+            Selected deployment option for this agent. 
+          title: Deployment Option
+          type: string
+        env_var_values:
+          description: Environment variable values to be set for this agent.
+          $ref: '#/components/schemas/EnvVarValues'
+      required:
+        - name
+        - ref
+    EnvVarValues:
+      title: Environment Variable Values
+      description: >-
+        Describes the values of the environment variables for a specific agent and it's dependencies
+      type: object
+      properties:
+        name:
+          type: string
+          description: name of the agent dependency these environment variables are for
+        values: 
+          type: object
+          additionalProperties:
+            type: string
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvVarValues'
+    EnvVar:
+      title: Environment Variable
+      description: Describes an environment variable
+      type: object
+      properties:
+        desc:
+          type: string
+        name:
+          type: string
+        required:
+          type: boolean
+        defaultValue:
+          type: string
+      required:
+        - desc
+        - name
+    SourceCodeDeployment:
+      title: Source Code Deployment
+      description: >-
+        Describes the source code where the agent is available. It specifies
+        also the type of deployer that it supports.
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - source_code
+        name:
+          type: string
+          title: Deployment Option Name
+          description: >-
+            Name this deployment option is referred to within this agent. This
+            is needed to indicate which one is preferred when this manifest is
+            referred. Can be omitted, in such case selection is not possible.
+        url:
+          title: Source Code Locator
+          description: >-
+            Location of the source code.             
+            Can be a local path to a directory or a tar/gz/zip file containing sources, 
+            e.g., /path/to/your/local/folder or file:///path/to/your/local/folder.
+            Can point to a GitHub repository, e.g., github.com/cisco-eti/agent-connect-protocol.git//examples/agents/mailcomposer 
+            or https://github.com/cisco-eti/agent-connect-protocol.git//examples/agents/mailcomposer, 
+            which indicates that source files can be found in the /examples/agents/mailcomposer subfolder in the repository. 
+            You can also specify a branch, e.g., github.com/cisco-eti/agent-connect-protocol.git?ref=branch_name.
+          type: string
+          format: uri
+        framework_config:
+          oneOf:
+            - $ref: '#/components/schemas/LangGraphConfig'
+            - $ref: '#/components/schemas/LlamaIndexConfig'
+          discriminator:
+            propertyName: framework_type
+            mapping:
+              langgraph: '#/components/schemas/LangGraphConfig'
+              llamaindex: '#/components/schemas/LlamaIndexConfig'
+      required:
+        - type
+        - url
+        - framework_config
+    LangGraphConfig:
+      title: Langgraph Config
+      description: Describes langgraph based agent deployment config
+      type: object
+      properties:
+        framework_type:
+          type: string
+          enum:
+            - langgraph
+        graph:
+          type: string
+      required:
+        - framework_type
+        - graph
+    LlamaIndexConfig:
+      title: Llamaindex Config
+      description: Describes llamaindex based agent deployment config
+      type: object
+      properties:
+        framework_type:
+          type: string
+          enum:
+            - llamaindex
+        path:
+          type: string
+        interrupts:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/InterruptConfig'
+      required:
+        - framework_type
+        - path
+    RemoteServiceDeployment:
+      title: Remote Service
+      description: Describes the network endpoint where the agent is available
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - remote_service
+        name:
+          type: string
+          title: Deployment Option Name
+          description: >-
+            Name this deployment option is referred to within this agent. This
+            is needed to indicate which one is preferred when this manifest is
+            referred. Can be omitted, in such case selection is not possible.            -
+        protocol:
+          $ref: '#/components/schemas/AgentConnectProtocol'
+      required:
+        - type
+        - protocol
+    DockerDeployment:
+      title: Docker Deployment
+      description: Describes the docker deployment for this agent
+      properties:
+        type:
+          type: string
+          enum:
+            - docker
+        name:
+          type: string
+          title: Deployment Option Name
+          description: >-
+            Name this deployment option is referred to within this agent. This
+            is needed to indicate which one is preferred when this manifest is
+            referred. Can be omitted, in such case selection is not possible.            -
+        image:
+          title: Agent Docker image
+          description: Container image built for the agent containing the agent and Workflow Server.
+          type: string
+          format: uri
+      required:
+        - type
+        - image
+        - protocol
+    AgentConnectProtocol:
+      title: ACP Details
+      description: ACP endpoint description
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - ACP
+        url:
+          title: ACP URL
+          description: URL pointing to the ACP endpoint root.
+          type: string
+          format: uri
+        agent_id:
+          title: Agent identifier
+          type: string
+          description: >-
+            Agent identifier in ACP server. If missing, the first returned agent
+            with matching name and version should be used.
+          format: uuid
+        authentication:
+          $ref: '#/components/schemas/SecurityScheme'
+      required:
+        - type
+        - url
+    InterruptConfig:
+      type: object
+      properties:
+        interrupt_ref:
+          type: string
+          example: my_app.interrupts:InterruptEvent
+        resume_ref:
+          type: string
+          example: my_app.interrupts:ResponseEvent
+      required:
+        - interrupt_ref
+        - resume_ref
+    SecurityScheme:
+      type: object
+      description: >-
+        This object contains an instance of an OpenAPI schema object, formatted
+        as per the OpenAPI specs:
+        https://spec.openapis.org/oas/v3.1.1.html#security-scheme-object-0
+      examples:
+        - type: apiKey
+          name: api-key
+          in: header
