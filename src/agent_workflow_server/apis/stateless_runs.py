@@ -335,6 +335,25 @@ async def get_stateless_run(
 
 
 @router.post(
+    "/runs/search",
+    responses={
+        200: {"model": List[RunStateless], "description": "Success"},
+        422: {"model": str, "description": "Validation Error"},
+    },
+    tags=["Stateless Runs"],
+    summary="Search Stateless Runs",
+    response_model_by_alias=True,
+)
+async def search_stateless_runs(
+    run_search_request: Annotated[
+        RunSearchRequest, Depends(_validate_run_search_request)
+    ] = Body(None, description=""),
+) -> List[RunStateless]:
+    """Search for stateless run.  This endpoint also functions as the endpoint to list all stateless Runs."""
+    return Runs.search_for_runs(run_search_request)
+
+
+@router.post(
     "/runs/{run_id}",
     responses={
         200: {"model": RunStateless, "description": "Success"},
@@ -361,25 +380,6 @@ async def resume_stateless_run(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
-
-
-@router.post(
-    "/runs/search",
-    responses={
-        200: {"model": List[RunStateless], "description": "Success"},
-        422: {"model": str, "description": "Validation Error"},
-    },
-    tags=["Stateless Runs"],
-    summary="Search Stateless Runs",
-    response_model_by_alias=True,
-)
-async def search_stateless_runs(
-    run_search_request: Annotated[
-        RunSearchRequest, Depends(_validate_run_search_request)
-    ] = Body(None, description=""),
-) -> List[RunStateless]:
-    """Search for stateless run.  This endpoint also functions as the endpoint to list all stateless Runs."""
-    return Runs.search_for_runs(run_search_request)
 
 
 @router.get(

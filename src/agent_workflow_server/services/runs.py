@@ -176,9 +176,11 @@ class Runs:
                         ):
                             runs.pop(run)
 
-        return list(
+        filtered_list = list(
             islice(islice(runs, search_request.offset, None), search_request.limit)
         )
+
+        return [_to_api_model(run) for run in filtered_list]
 
     @staticmethod
     async def resume(run_id: str, user_input: Dict[str, Any]) -> ApiRun:
