@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 import os
 
 import pytest
@@ -9,9 +12,6 @@ from agent_workflow_server.apis.authentication import (
     authentication_with_api_key,
     setup_api_key_auth,
 )
-
-# Copyright AGNTCY Contributors (https://github.com/agntcy)
-# SPDX-License-Identifier: Apache-2.0
 
 
 @pytest.mark.asyncio
