@@ -58,6 +58,7 @@ async def test_authentication_with_api_key_parametrized(
         assert result == expected_result
 
 
+@pytest.mark.asyncio
 async def test_authentication_with_api_key_missing(mocker: MockerFixture):
     # Test when API_KEY is set but no header is provided
     test_api_key = "test-api-key"
