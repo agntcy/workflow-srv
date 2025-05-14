@@ -81,7 +81,8 @@ run:
 	poetry run server
 
 test:
-	poetry run pytest
+	poetry install
+	AGWS_STORAGE_PERSIST=False poetry run pytest
 
 format:
 	poetry run ruff format .

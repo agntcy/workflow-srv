@@ -289,8 +289,7 @@ async def test_search_runs(
         (
             ApiRunCreate(agent_id=MOCK_AGENT_ID, input=MOCK_RUN_INPUT_ERROR),
             "error",
-            # FIXME: ACP spec does not currently include error messages in streams
-            {},
+            MOCK_RUN_OUTPUT_ERROR,
         ),
         (
             ApiRunCreate(agent_id=MOCK_AGENT_ID, input=MOCK_RUN_INPUT_STREAM),
@@ -341,6 +340,19 @@ async def test_invoke_stream(
 
                     assert event.actual_instance.run_id == new_run.run_id
                     assert output == expected_json
+                    assert event.actual_instance.status == expected_status
+                elif event.actual_instance.type == "interrupt":
+                    output = json.dumps(event.actual_instance.interrupt, sort_keys=True)
+                    expected_json = json.dumps(exp_output, sort_keys=True)
+
+                    assert event.actual_instance.run_id == new_run.run_id
+                    assert output == expected_json
+                    assert event.actual_instance.status == expected_status
+                elif event.actual_instance.type == "error":
+                    output = event.actual_instance.description
+
+                    assert event.actual_instance.run_id == new_run.run_id
+                    assert output == exp_output
                     assert event.actual_instance.status == expected_status
                 else:
                     assert False, (

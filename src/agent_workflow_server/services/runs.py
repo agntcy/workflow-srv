@@ -23,6 +23,12 @@ from agent_workflow_server.generated.models.run_stateless import (
 from agent_workflow_server.generated.models.stream_event_payload import (
     StreamEventPayload,
 )
+from agent_workflow_server.generated.models.value_run_error_update import (
+    ValueRunErrorUpdate,
+)
+from agent_workflow_server.generated.models.value_run_interrupt_update import (
+    ValueRunInterruptUpdate,
+)
 from agent_workflow_server.generated.models.value_run_result_update import (
     ValueRunResultUpdate,
 )
@@ -307,14 +313,38 @@ class Runs:
             if run is None:
                 raise ValueError(f"Run {run_id} not found")
 
-            yield StreamEventPayload(
-                ValueRunResultUpdate(
-                    type="values",
-                    run_id=run["run_id"],
-                    status=run["status"],
-                    values=msg_data,
+            run_status = run["status"]
+            if run_status == "interrupted":
+                yield StreamEventPayload(
+                    ValueRunInterruptUpdate(
+                        type="interrupt",
+                        run_id=run["run_id"],
+                        status=run_status,
+                        interrupt=msg_data,
+                    )
                 )
-            )
+            elif run_status == "success" or run_status == "pending":
+                yield StreamEventPayload(
+                    ValueRunResultUpdate(
+                        type="values",
+                        run_id=run["run_id"],
+                        status=run_status,
+                        values=msg_data,
+                    )
+                )
+            elif run_status == "error":
+                yield StreamEventPayload(
+                    ValueRunErrorUpdate(
+                        type="error",
+                        run_id=run["run_id"],
+                        status=run_status,
+                        description=msg_data,
+                        # FIXME: we have not defined the errcodes
+                        errcode=0,
+                    )
+                )
+            else:
+                raise ValueError(f"Run status {run_status} unknown")
 
     class Interrupts:
         @staticmethod

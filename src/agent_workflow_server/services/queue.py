@@ -162,7 +162,7 @@ async def worker(worker_id: int):
 
             DB.update_run_info(run_id, run_info)
             await Runs.set_status(run_id, "error")
-            log_run(worker_id, run_id, "exeeded attempts")
+            log_run(worker_id, run_id, "exceeded attempts")
 
         except Exception as error:
             ended_at = datetime.now().timestamp()
@@ -184,10 +184,7 @@ async def worker(worker_id: int):
                 **{"error": error, **run_stats(run_info)},
             )
 
-            # FIXME: ACP spec does not currently include error messages
-            # in streams
-            await Runs.Stream.publish(run_id, Message(type="message", data={}))
-
+            await Runs.Stream.publish(run_id, Message(type="message", data=str(error)))
             await RUNS_QUEUE.put(run_id)  # Re-queue for retry
 
         finally:
