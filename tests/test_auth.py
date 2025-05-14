@@ -14,42 +14,50 @@ from agent_workflow_server.apis.authentication import (
 )
 
 
+@pytest.mark.parametrize(
+    "api_key_set,provided_key,expected_result,should_raise,expected_status,expected_detail",
+    [
+        # Test when API_KEY is not set (authentication disabled)
+        (None, "any-key", None, False, None, None),
+        # Test when API_KEY is set and the header matches
+        ("test-api-key", "test-api-key", "test-api-key", False, None, None),
+        # Test when API_KEY is set but the header doesn't match
+        ("test-api-key", "wrong-api-key", None, True, 401, "Invalid API Key"),
+        # Test when API_KEY is set but no header is provided
+        ("test-api-key", None, None, True, 401, "Invalid API Key"),
+        # Additional test: empty string as API key
+        ("test-api-key", "", None, True, 401, "Invalid API Key"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_authentication_with_api_key_disabled(mocker: MockerFixture):
-    # Test when API_KEY is not set (authentication disabled)
-    mocker.patch.dict(os.environ, {}, clear=True)
-    mocker.patch("agent_workflow_server.apis.authentication.API_KEY", None)
+async def test_authentication_with_api_key_parametrized(
+    mocker: MockerFixture,
+    api_key_set,
+    provided_key,
+    expected_result,
+    should_raise,
+    expected_status,
+    expected_detail,
+):
+    # Setup environment
+    if api_key_set is None:
+        mocker.patch.dict(os.environ, {}, clear=True)
+        mocker.patch("agent_workflow_server.apis.authentication.API_KEY", None)
+    else:
+        mocker.patch.dict(os.environ, {"API_KEY": api_key_set})
+        mocker.patch("agent_workflow_server.apis.authentication.API_KEY", api_key_set)
 
-    result = await authentication_with_api_key("any-key")
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_authentication_with_api_key_valid(mocker: MockerFixture):
-    # Test when API_KEY is set and the header matches
-    test_api_key = "test-api-key"
-    mocker.patch.dict(os.environ, {"API_KEY": test_api_key})
-    mocker.patch("agent_workflow_server.apis.authentication.API_KEY", test_api_key)
-
-    result = await authentication_with_api_key(test_api_key)
-    assert result == test_api_key
-
-
-@pytest.mark.asyncio
-async def test_authentication_with_api_key_invalid(mocker: MockerFixture):
-    # Test when API_KEY is set but the header doesn't match
-    test_api_key = "test-api-key"
-    mocker.patch.dict(os.environ, {"API_KEY": test_api_key})
-    mocker.patch("agent_workflow_server.apis.authentication.API_KEY", test_api_key)
-
-    with pytest.raises(HTTPException) as excinfo:
-        await authentication_with_api_key("wrong-api-key")
-
-    assert excinfo.value.status_code == 401
-    assert excinfo.value.detail == "Invalid API Key"
+    # Run the test
+    if should_raise:
+        with pytest.raises(HTTPException) as excinfo:
+            await authentication_with_api_key(provided_key)
+        assert excinfo.value.status_code == expected_status
+        assert excinfo.value.detail == expected_detail
+    else:
+        result = await authentication_with_api_key(provided_key)
+        assert result == expected_result
 
 
-@pytest.mark.asyncio
 async def test_authentication_with_api_key_missing(mocker: MockerFixture):
     # Test when API_KEY is set but no header is provided
     test_api_key = "test-api-key"
