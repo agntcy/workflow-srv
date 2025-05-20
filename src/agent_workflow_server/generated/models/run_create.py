@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, field_v
 from typing import Any, ClassVar, Dict, List, Optional
 from typing_extensions import Annotated
 from agent_workflow_server.generated.models.config import Config
+from agent_workflow_server.generated.models.input_schema import InputSchema
 from agent_workflow_server.generated.models.stream_mode import StreamMode
 try:
     from typing import Self
@@ -38,7 +39,7 @@ class RunCreate(BaseModel):
     Payload for creating a run.
     """ # noqa: E501
     agent_id: Optional[StrictStr] = Field(default=None, description="The agent ID to run. If not provided will use the default agent for this service.")
-    input: Optional[Dict[str, Any]] = Field(default=None, description="The input to the agent. The schema is described in agent ACP descriptor under 'spec.thread_state'.'input'.")
+    input: Optional[InputSchema] = None
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Metadata to assign to the run.")
     config: Optional[Config] = None
     webhook: Optional[Annotated[str, Field(min_length=1, strict=True, max_length=65536)]] = Field(default=None, description="Webhook to call upon change of run status. This is a url that accepts a POST containing the `Run` object as body. See Callbacks definition.")
@@ -105,6 +106,9 @@ class RunCreate(BaseModel):
             },
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of input
+        if self.input:
+            _dict['input'] = self.input.to_dict()
         # override the default output from pydantic by calling `to_dict()` of config
         if self.config:
             _dict['config'] = self.config.to_dict()
@@ -129,7 +133,7 @@ class RunCreate(BaseModel):
 
         _obj = cls.model_validate({
             "agent_id": obj.get("agent_id"),
-            "input": obj.get("input"),
+            "input": InputSchema.from_dict(obj.get("input")) if obj.get("input") is not None else None,
             "metadata": obj.get("metadata"),
             "config": Config.from_dict(obj.get("config")) if obj.get("config") is not None else None,
             "webhook": obj.get("webhook"),

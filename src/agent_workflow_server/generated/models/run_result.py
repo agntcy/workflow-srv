@@ -26,6 +26,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 from agent_workflow_server.generated.models.message import Message
+from agent_workflow_server.generated.models.output_schema import OutputSchema
 try:
     from typing import Self
 except ImportError:
@@ -36,7 +37,7 @@ class RunResult(BaseModel):
     Final result of a Run.
     """ # noqa: E501
     type: StrictStr
-    values: Optional[Dict[str, Any]] = Field(default=None, description="The output of the agent. The schema is described in agent ACP descriptor under 'spec.output'.")
+    values: Optional[OutputSchema] = None
     messages: Optional[List[Message]] = Field(default=None, description="The messages returned by the run.")
     __properties: ClassVar[List[str]] = ["type", "values", "messages"]
 
@@ -84,6 +85,9 @@ class RunResult(BaseModel):
             },
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of values
+        if self.values:
+            _dict['values'] = self.values.to_dict()
         # override the default output from pydantic by calling `to_dict()` of each item in messages (list)
         _items = []
         if self.messages:
@@ -104,7 +108,7 @@ class RunResult(BaseModel):
 
         _obj = cls.model_validate({
             "type": obj.get("type"),
-            "values": obj.get("values"),
+            "values": OutputSchema.from_dict(obj.get("values")) if obj.get("values") is not None else None,
             "messages": [Message.from_dict(_item) for _item in obj.get("messages")] if obj.get("messages") is not None else None
         })
         return _obj

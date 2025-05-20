@@ -27,6 +27,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 from agent_workflow_server.generated.models.message import Message
+from agent_workflow_server.generated.models.thread_state_schema import ThreadStateSchema
 try:
     from typing import Self
 except ImportError:
@@ -41,7 +42,7 @@ class Thread(BaseModel):
     updated_at: datetime = Field(description="The last time the thread was updated.")
     metadata: Dict[str, Any] = Field(description="Free form metadata for this thread")
     status: StrictStr = Field(description="The status of the thread.")
-    values: Optional[Dict[str, Any]] = Field(default=None, description="The thread state. The schema is described in agent ACP descriptor under 'spec.thread_state'.")
+    values: Optional[ThreadStateSchema] = Field(default=None, description="The current state of the thread.")
     messages: Optional[List[Message]] = Field(default=None, description="The current Messages of the thread. If messages are contained in Thread.values, implementations should remove them from values when returning messages. When this key isn't present it means the thread/agent doesn't support messages.")
     __properties: ClassVar[List[str]] = ["thread_id", "created_at", "updated_at", "metadata", "status", "values", "messages"]
 
@@ -89,6 +90,9 @@ class Thread(BaseModel):
             },
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of values
+        if self.values:
+            _dict['values'] = self.values.to_dict()
         # override the default output from pydantic by calling `to_dict()` of each item in messages (list)
         _items = []
         if self.messages:
@@ -113,7 +117,7 @@ class Thread(BaseModel):
             "updated_at": obj.get("updated_at"),
             "metadata": obj.get("metadata"),
             "status": obj.get("status"),
-            "values": obj.get("values"),
+            "values": ThreadStateSchema.from_dict(obj.get("values")) if obj.get("values") is not None else None,
             "messages": [Message.from_dict(_item) for _item in obj.get("messages")] if obj.get("messages") is not None else None
         })
         return _obj

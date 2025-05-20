@@ -38,6 +38,16 @@ def _make_run(run_create: ApiRunCreateStateful) -> Run:
         Run: The service model representation of the run.
     """
     curr_time = datetime.now()
+    input_data = run_create.input
+    # Convert input to a dict if it's not already
+    if hasattr(input_data, "model_dump"):  # Pydantic v2
+        input_dict = input_data.model_dump()
+    elif hasattr(input_data, "dict"):  # Pydantic v1
+        input_dict = input_data.dict()
+    elif hasattr(input_data, "actual_instance"):  # InputSchema
+        input_dict = input_data.actual_instance
+    else:
+        input_dict = dict(input_data)  # Try direct conversion
 
     return {
         "run_id": str(uuid4()),
@@ -45,7 +55,7 @@ def _make_run(run_create: ApiRunCreateStateful) -> Run:
         "agent_id": run_create.agent_id,
         "created_at": curr_time,
         "updated_at": curr_time,
-        "input": run_create.input,
+        "input": input_dict,
         "config": run_create.config.model_dump() if run_create.config else None,
         "status": "pending",
     }

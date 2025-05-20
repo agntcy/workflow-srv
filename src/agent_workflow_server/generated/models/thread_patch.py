@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Any, ClassVar, Dict, List, Optional
 from agent_workflow_server.generated.models.message import Message
 from agent_workflow_server.generated.models.thread_checkpoint import ThreadCheckpoint
+from agent_workflow_server.generated.models.thread_state_schema import ThreadStateSchema
 try:
     from typing import Self
 except ImportError:
@@ -38,7 +39,7 @@ class ThreadPatch(BaseModel):
     """ # noqa: E501
     checkpoint: Optional[ThreadCheckpoint] = Field(default=None, description="The identifier of the checkpoint to branch from. Ignored for metadata-only patches. If not provided, defaults to the latest checkpoint.")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Metadata to merge with existing thread metadata.")
-    values: Optional[Dict[str, Any]] = Field(default=None, description="The thread state. The schema is described in agent ACP descriptor under 'spec.thread_state'.")
+    values: Optional[ThreadStateSchema] = Field(default=None, description="The current state of the thread.")
     messages: Optional[List[Message]] = Field(default=None, description="The current Messages of the thread. If messages are contained in Thread.values, implementations should remove them from values when returning messages. When this key isn't present it means the thread/agent doesn't support messages.")
     __properties: ClassVar[List[str]] = ["checkpoint", "metadata", "values", "messages"]
 
@@ -82,6 +83,9 @@ class ThreadPatch(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of checkpoint
         if self.checkpoint:
             _dict['checkpoint'] = self.checkpoint.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of values
+        if self.values:
+            _dict['values'] = self.values.to_dict()
         # override the default output from pydantic by calling `to_dict()` of each item in messages (list)
         _items = []
         if self.messages:
@@ -103,7 +107,7 @@ class ThreadPatch(BaseModel):
         _obj = cls.model_validate({
             "checkpoint": ThreadCheckpoint.from_dict(obj.get("checkpoint")) if obj.get("checkpoint") is not None else None,
             "metadata": obj.get("metadata"),
-            "values": obj.get("values"),
+            "values": ThreadStateSchema.from_dict(obj.get("values")) if obj.get("values") is not None else None,
             "messages": [Message.from_dict(_item) for _item in obj.get("messages")] if obj.get("messages") is not None else None
         })
         return _obj
