@@ -39,8 +39,8 @@ class AgentDeployment(BaseModel):
     """ # noqa: E501
     deployment_options: List[AgentDeploymentDeploymentOptionsInner] = Field(description="List of possible methods to instantiate or consume the agent.  Any of the available option could be used. Every option could be associated with a unique name within this agent. If present, when another manifest refers to this manifest, it can also select the preferred deployment option.")
     env_vars: Optional[List[EnvVar]] = Field(default=None, description="List of possible environment variables that the agent may require to be set before it can be used.")
-    dependencies: Optional[List[AgentDependency]] = Field(default=None, description="List of all other agents this agent depends on")
-    __properties: ClassVar[List[str]] = ["deployment_options", "env_vars", "dependencies"]
+    agent_deps: Optional[List[AgentDependency]] = Field(default=None, description="List of all other agents this agent depends on")
+    __properties: ClassVar[List[str]] = ["deployment_options", "env_vars", "agent_deps"]
 
     model_config = {
         "populate_by_name": True,
@@ -93,13 +93,13 @@ class AgentDeployment(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict['env_vars'] = _items
-        # override the default output from pydantic by calling `to_dict()` of each item in dependencies (list)
+        # override the default output from pydantic by calling `to_dict()` of each item in agent_deps (list)
         _items = []
-        if self.dependencies:
-            for _item in self.dependencies:
+        if self.agent_deps:
+            for _item in self.agent_deps:
                 if _item:
                     _items.append(_item.to_dict())
-            _dict['dependencies'] = _items
+            _dict['agent_deps'] = _items
         return _dict
 
     @classmethod
@@ -114,7 +114,7 @@ class AgentDeployment(BaseModel):
         _obj = cls.model_validate({
             "deployment_options": [AgentDeploymentDeploymentOptionsInner.from_dict(_item) for _item in obj.get("deployment_options")] if obj.get("deployment_options") is not None else None,
             "env_vars": [EnvVar.from_dict(_item) for _item in obj.get("env_vars")] if obj.get("env_vars") is not None else None,
-            "dependencies": [AgentDependency.from_dict(_item) for _item in obj.get("dependencies")] if obj.get("dependencies") is not None else None
+            "agent_deps": [AgentDependency.from_dict(_item) for _item in obj.get("agent_deps")] if obj.get("agent_deps") is not None else None
         })
         return _obj
 

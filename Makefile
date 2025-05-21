@@ -3,7 +3,7 @@
 
 # Variables
 SPEC_FILE := acp-spec/openapi.json
-MANIFEST_SPEC_FILE := manifest-spec/openapi.yaml
+MANIFEST_SPEC_FILE := manifest-spec/manifest.json
 
 OUTPUT_DIR := src/agent_workflow_server/generated
 OUTPUT_DIR_TMP := src/agent_workflow_server/tmp

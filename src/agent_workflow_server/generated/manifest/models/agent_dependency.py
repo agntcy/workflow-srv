@@ -38,7 +38,7 @@ class AgentDependency(BaseModel):
     """ # noqa: E501
     name: StrictStr = Field(description="Name of the agent dependency")
     ref: AgentReference
-    deployment_option: Optional[StrictStr] = Field(default=None, description="Selected deployment option for this agent. ")
+    deployment_option: Optional[StrictStr] = Field(default=None, description="Selected deployment option for this agent.")
     env_var_values: Optional[EnvVarValues] = Field(default=None, description="Environment variable values to be set for this agent.")
     __properties: ClassVar[List[str]] = ["name", "ref", "deployment_option", "env_var_values"]
 
