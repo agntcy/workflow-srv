@@ -4,7 +4,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, List, Optional
 
-from agent_workflow_server.generated.manifest.models.agent_manifest import AgentManifest
+from agent_workflow_server.generated.manifest.models.agent_deployment import (
+    AgentDeployment,
+)
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.services.thread_state import ThreadState
 from agent_workflow_server.storage.models import Run
@@ -48,7 +50,7 @@ class BaseAdapter(ABC):
     def load_agent(
         self,
         agent: Any,
-        manifest: AgentManifest,
+        deployment: AgentDeployment,
         set_thread_persistance_flag: Optional[callable] = None,
     ) -> Optional[BaseAgent]:
         """Checks the type of the agent and if it is supported, returns an instance of the agent."""
