@@ -26,7 +26,6 @@ import json
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 from agent_workflow_server.generated.models.message import Message
-from agent_workflow_server.generated.models.output_schema import OutputSchema
 from agent_workflow_server.generated.models.run_status import RunStatus
 try:
     from typing import Self
@@ -40,7 +39,7 @@ class ValueRunResultUpdate(BaseModel):
     type: StrictStr
     run_id: StrictStr = Field(description="The ID of the run.")
     status: RunStatus = Field(description="Status of the Run when this result was generated. This is particularly useful when this data structure is used for streaming results. As the server can indicate an interrupt or an error condition while streaming the result.")
-    values: OutputSchema
+    values: Optional[Any] = Field(description="The output of the agent. The schema is described in agent ACP descriptor under 'spec.output'.")
     messages: Optional[List[Message]] = Field(default=None, description="Stream of messages returned by the run.")
     __properties: ClassVar[List[str]] = ["type", "run_id", "status", "values", "messages"]
 
@@ -88,9 +87,6 @@ class ValueRunResultUpdate(BaseModel):
             },
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of values
-        if self.values:
-            _dict['values'] = self.values.to_dict()
         # override the default output from pydantic by calling `to_dict()` of each item in messages (list)
         _items = []
         if self.messages:
@@ -98,6 +94,11 @@ class ValueRunResultUpdate(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict['messages'] = _items
+        # set to None if values (nullable) is None
+        # and model_fields_set contains the field
+        if self.values is None and "values" in self.model_fields_set:
+            _dict['values'] = None
+
         return _dict
 
     @classmethod
@@ -113,7 +114,7 @@ class ValueRunResultUpdate(BaseModel):
             "type": obj.get("type"),
             "run_id": obj.get("run_id"),
             "status": obj.get("status"),
-            "values": OutputSchema.from_dict(obj.get("values")) if obj.get("values") is not None else None,
+            "values": obj.get("values"),
             "messages": [Message.from_dict(_item) for _item in obj.get("messages")] if obj.get("messages") is not None else None
         })
         return _obj

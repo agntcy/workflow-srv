@@ -356,7 +356,9 @@ async def test_invoke_stream(
                     )
                 elif event.actual_instance.type == "values":
                     # Not canonical, but close enough.
-                    output = json.dumps(event.actual_instance.values.actual_instance, sort_keys=True)
+                    output = json.dumps(
+                        event.actual_instance.values, sort_keys=True
+                    )
                     expected_json = json.dumps(exp_output, sort_keys=True)
 
                     assert event.actual_instance.run_id == new_run.run_id

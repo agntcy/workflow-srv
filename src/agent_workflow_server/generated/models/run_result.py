@@ -26,7 +26,6 @@ import json
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 from agent_workflow_server.generated.models.message import Message
-from agent_workflow_server.generated.models.output_schema import OutputSchema
 try:
     from typing import Self
 except ImportError:
@@ -37,7 +36,7 @@ class RunResult(BaseModel):
     Final result of a Run.
     """ # noqa: E501
     type: StrictStr
-    values: Optional[OutputSchema] = None
+    values: Optional[Any] = Field(default=None, description="The output of the agent. The schema is described in agent ACP descriptor under 'spec.output'.")
     messages: Optional[List[Message]] = Field(default=None, description="The messages returned by the run.")
     __properties: ClassVar[List[str]] = ["type", "values", "messages"]
 
@@ -85,9 +84,6 @@ class RunResult(BaseModel):
             },
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of values
-        if self.values:
-            _dict['values'] = self.values.to_dict()
         # override the default output from pydantic by calling `to_dict()` of each item in messages (list)
         _items = []
         if self.messages:
@@ -95,6 +91,11 @@ class RunResult(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict['messages'] = _items
+        # set to None if values (nullable) is None
+        # and model_fields_set contains the field
+        if self.values is None and "values" in self.model_fields_set:
+            _dict['values'] = None
+
         return _dict
 
     @classmethod
@@ -108,7 +109,7 @@ class RunResult(BaseModel):
 
         _obj = cls.model_validate({
             "type": obj.get("type"),
-            "values": OutputSchema.from_dict(obj.get("values")) if obj.get("values") is not None else None,
+            "values": obj.get("values"),
             "messages": [Message.from_dict(_item) for _item in obj.get("messages")] if obj.get("messages") is not None else None
         })
         return _obj

@@ -122,7 +122,7 @@ async def test_get_thread_by_id(mock_thread, mock_agent):
     assert thread.thread_id == mock_thread["thread_id"]
     assert thread.metadata == mock_thread["metadata"]
     assert thread.status == mock_thread["status"]
-    assert thread.values.actual_instance == {"key": "value"}
+    assert thread.values == {"key": "value"}
 
     # Test retrieving non-existent thread
     thread = await Threads.get_thread_by_id("nonexistent_id")
@@ -170,7 +170,7 @@ async def test_copy_thread(mock_thread, mock_agent):
     assert copied_thread.thread_id != mock_thread["thread_id"]
     assert copied_thread.metadata == mock_thread["metadata"]
     assert copied_thread.status == mock_thread["status"]
-    
+
     # Verify agent state is retrieved for the new thread
     mock_agent.get_agent_state.assert_called_once_with(mock_thread["thread_id"])
 
@@ -178,7 +178,7 @@ async def test_copy_thread(mock_thread, mock_agent):
     mock_agent.get_agent_state.reset_mock()  # Reset call history
     copied_thread = await Threads.copy_thread("nonexistent_id")
     assert copied_thread is None
-    
+
     # The agent's get_agent_state shouldn't be called for nonexistent thread
     mock_agent.get_agent_state.assert_not_called()
 
@@ -232,7 +232,7 @@ async def test_get_history(mock_thread, mock_agent):
     history = await Threads.get_history(mock_thread["thread_id"], 10, 0)
     assert len(history) == 2
     assert history[0].checkpoint.checkpoint_id == "checkpoint1"
-    assert history[0].values.actual_instance == {"key1": "value1"}
+    assert history[0].values == {"key1": "value1"}
     assert history[0].metadata == {"meta": "data1"}
     assert history[1].checkpoint.checkpoint_id == "checkpoint2"
 

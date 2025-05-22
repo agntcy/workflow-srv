@@ -23,9 +23,8 @@ import json
 
 
 
-from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
-from agent_workflow_server.generated.models.config_schema import ConfigSchema
 try:
     from typing import Self
 except ImportError:
@@ -37,7 +36,7 @@ class Config(BaseModel):
     """ # noqa: E501
     tags: Optional[List[StrictStr]] = None
     recursion_limit: Optional[StrictInt] = None
-    configurable: Optional[ConfigSchema] = None
+    configurable: Optional[Any] = Field(default=None, description="The configuration for this agent. The schema is described in agent ACP descriptor under 'spec.config'. If missing, default values are used.")
     __properties: ClassVar[List[str]] = ["tags", "recursion_limit", "configurable"]
 
     model_config = {
@@ -77,9 +76,11 @@ class Config(BaseModel):
             },
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of configurable
-        if self.configurable:
-            _dict['configurable'] = self.configurable.to_dict()
+        # set to None if configurable (nullable) is None
+        # and model_fields_set contains the field
+        if self.configurable is None and "configurable" in self.model_fields_set:
+            _dict['configurable'] = None
+
         return _dict
 
     @classmethod
@@ -94,7 +95,7 @@ class Config(BaseModel):
         _obj = cls.model_validate({
             "tags": obj.get("tags"),
             "recursion_limit": obj.get("recursion_limit"),
-            "configurable": ConfigSchema.from_dict(obj.get("configurable")) if obj.get("configurable") is not None else None
+            "configurable": obj.get("configurable")
         })
         return _obj
 

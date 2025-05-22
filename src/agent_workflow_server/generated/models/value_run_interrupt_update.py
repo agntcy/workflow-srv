@@ -24,7 +24,7 @@ import json
 
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar, Dict, List, Optional
 from agent_workflow_server.generated.models.run_status import RunStatus
 try:
     from typing import Self
@@ -36,7 +36,7 @@ class ValueRunInterruptUpdate(BaseModel):
     Partial result provided as value through streaming.
     """ # noqa: E501
     type: StrictStr
-    interrupt: Dict[str, Any] = Field(description="This schema describes the interrupt payload. Actual schema describes a polimorphic object, which means a schema structured with `oneOf` and `discriminator`. The discriminator is the `interrupt_type`, while the schemas will be the ones defined in the agent spec under `interrupts`/`interrupt_payload` For example:          oneOf:   - $ref: '#/components/schemas/ApprovalInterruptPayload'   - $ref: '#/components/schemas/QuestionInterruptPayload' discriminator:   propertyName: interruput_type   mapping:     approval: '#/components/schemas/ApprovalInterruptPayload'     question: '#/components/schemas/QuestionInterruptPayload'")
+    interrupt: Optional[Any] = Field(description="This schema describes the interrupt payload. Actual schema describes a polimorphic object, which means a schema structured with `oneOf` and `discriminator`. The discriminator is the `interrupt_type`, while the schemas will be the ones defined in the agent spec under `interrupts`/`interrupt_payload` For example:          oneOf:   - $ref: '#/components/schemas/ApprovalInterruptPayload'   - $ref: '#/components/schemas/QuestionInterruptPayload' discriminator:   propertyName: interruput_type   mapping:     approval: '#/components/schemas/ApprovalInterruptPayload'     question: '#/components/schemas/QuestionInterruptPayload'")
     run_id: StrictStr = Field(description="The ID of the run.")
     status: RunStatus = Field(description="Status of the Run when this result was generated. This is particularly useful when this data structure is used for streaming results. As the server can indicate an interrupt or an error condition while streaming the result.")
     __properties: ClassVar[List[str]] = ["type", "interrupt", "run_id", "status"]
@@ -85,6 +85,11 @@ class ValueRunInterruptUpdate(BaseModel):
             },
             exclude_none=True,
         )
+        # set to None if interrupt (nullable) is None
+        # and model_fields_set contains the field
+        if self.interrupt is None and "interrupt" in self.model_fields_set:
+            _dict['interrupt'] = None
+
         return _dict
 
     @classmethod
