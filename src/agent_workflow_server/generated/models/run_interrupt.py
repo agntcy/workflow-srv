@@ -24,7 +24,7 @@ import json
 
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
 except ImportError:
@@ -35,7 +35,7 @@ class RunInterrupt(BaseModel):
     Interrupt occurred during a Run
     """ # noqa: E501
     type: StrictStr
-    interrupt: Dict[str, Any] = Field(description="This schema describes the interrupt payload. Actual schema describes a polimorphic object, which means a schema structured with `oneOf` and `discriminator`. The discriminator is the `interrupt_type`, while the schemas will be the ones defined in the agent spec under `interrupts`/`interrupt_payload` For example:          oneOf:   - $ref: '#/components/schemas/ApprovalInterruptPayload'   - $ref: '#/components/schemas/QuestionInterruptPayload' discriminator:   propertyName: interruput_type   mapping:     approval: '#/components/schemas/ApprovalInterruptPayload'     question: '#/components/schemas/QuestionInterruptPayload'")
+    interrupt: Optional[Any] = Field(description="This schema describes the interrupt payload. Actual schema describes a polimorphic object, which means a schema structured with `oneOf` and `discriminator`. The discriminator is the `interrupt_type`, while the schemas will be the ones defined in the agent spec under `interrupts`/`interrupt_payload` For example:          oneOf:   - $ref: '#/components/schemas/ApprovalInterruptPayload'   - $ref: '#/components/schemas/QuestionInterruptPayload' discriminator:   propertyName: interruput_type   mapping:     approval: '#/components/schemas/ApprovalInterruptPayload'     question: '#/components/schemas/QuestionInterruptPayload'")
     __properties: ClassVar[List[str]] = ["type", "interrupt"]
 
     @field_validator('type')
@@ -82,6 +82,11 @@ class RunInterrupt(BaseModel):
             },
             exclude_none=True,
         )
+        # set to None if interrupt (nullable) is None
+        # and model_fields_set contains the field
+        if self.interrupt is None and "interrupt" in self.model_fields_set:
+            _dict['interrupt'] = None
+
         return _dict
 
     @classmethod

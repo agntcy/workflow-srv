@@ -27,7 +27,7 @@ from fastapi import (  # noqa: F401
 
 from agent_workflow_server.generated.models.extra_models import TokenModel  # noqa: F401
 from pydantic import Field, StrictBool, StrictInt, StrictStr, field_validator
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 from typing_extensions import Annotated
 from agent_workflow_server.generated.models.run_create_stateful import RunCreateStateful
 from agent_workflow_server.generated.models.run_output_stream import RunOutputStream
@@ -209,7 +209,7 @@ async def list_thread_runs(
 async def resume_thread_run(
     thread_id: Annotated[StrictStr, Field(description="The ID of the thread.")] = Path(..., description="The ID of the thread."),
     run_id: Annotated[StrictStr, Field(description="The ID of the run.")] = Path(..., description="The ID of the run."),
-    body: Dict[str, Any] = Body(None, description=""),
+    body: Optional[Any] = Body(None, description=""),
 ) -> RunStateful:
     """Provide the needed input to a run to resume its execution. Can only be called for runs that are in the interrupted state Schema of the provided input must match with the schema specified in the agent specs under interrupts for the interrupt type the agent generated for this specific interruption."""
     if not BaseThreadRunsApi.subclasses:

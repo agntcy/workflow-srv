@@ -319,7 +319,7 @@ async def resume_thread_run(
     run_id: Annotated[StrictStr, Field(description="The ID of the run.")] = Path(
         ..., description="The ID of the run."
     ),
-    body: Dict[str, Any] = Body(None, description=""),
+    body: Optional[Any] = Body(None, description=""),
 ) -> RunStateful:
     """Provide the needed input to a run to resume its execution. Can only be called for runs that are in the interrupted state Schema of the provided input must match with the schema specified in the agent specs under interrupts for the interrupt type the agent generated for this specific interruption."""
     raise HTTPException(status_code=500, detail="Not implemented")

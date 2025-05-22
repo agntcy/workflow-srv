@@ -6,7 +6,7 @@
 from typing import ClassVar, Dict, List, Tuple  # noqa: F401
 
 from pydantic import Field, StrictBool, StrictStr, field_validator
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 from typing_extensions import Annotated
 from agent_workflow_server.generated.models.run_create_stateless import RunCreateStateless
 from agent_workflow_server.generated.models.run_output_stream import RunOutputStream
@@ -73,7 +73,7 @@ class BaseStatelessRunsApi:
     async def resume_stateless_run(
         self,
         run_id: Annotated[StrictStr, Field(description="The ID of the run.")],
-        body: Dict[str, Any],
+        body: Optional[Any],
     ) -> RunStateless:
         """Provide the needed input to a run to resume its execution. Can only be called for runs that are in the interrupted state Schema of the provided input must match with the schema specified in the agent specs under interrupts for the interrupt type the agent generated for this specific interruption."""
         ...
