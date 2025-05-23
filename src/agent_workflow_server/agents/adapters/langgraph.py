@@ -15,7 +15,9 @@ from agent_workflow_server.agents.base import (
     BaseAgent,
     ThreadsNotSupportedError,
 )
-from agent_workflow_server.generated.manifest.models.agent_manifest import AgentManifest
+from agent_workflow_server.generated.manifest.models.agent_deployment import (
+    AgentDeployment,
+)
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.services.thread_state import ThreadState
 from agent_workflow_server.storage.models import Run
@@ -25,7 +27,7 @@ class LangGraphAdapter(BaseAdapter):
     def load_agent(
         self,
         agent: object,
-        manifest: AgentManifest,
+        manifest: AgentDeployment,
         set_thread_persistance_flag: Optional[callable],
     ) -> Optional[BaseAgent]:
         if isinstance(agent, Graph):

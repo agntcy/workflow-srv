@@ -1,92 +1,108 @@
 {
-    "metadata": {
-        "ref": {
-            "name": "org.agntcy.mock_agent",
-            "version": "0.0.1"
-        },
-        "description": "A Mock Agent"
-    },
-    "specs": {
-        "input": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "output": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "config": {
-            "type": "object",
-            "description": "The configuration of the agent",
-            "properties": {
-                "test": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "capabilities": {
-            "threads": false,
-            "interrupts": false,
-            "callbacks": false
-        },
-        "interrupts": [
-            {
-                "interrupt_type": "mock_interrupt",
-                "interrupt_payload": {
-                    "type": "object",
-                    "title": "Mock interrupt",
-                    "description": "A Mock interrupt",
-                    "properties": {
-                        "interrupt_message": {
-                            "title": "Question",
-                            "description": "Natural language question that is going to be asked by this agent",
-                            "type": "string"
+    "authors": [
+        "Cisco Systems"
+    ],
+    "extensions": [
+        {
+            "name": "oasf.agntcy.org/feature/runtime/manifest",
+            "data": {
+                "deployment": {
+                    "agent_deps": [],
+                    "deployment_options": [
+                        {
+                            "type": "source_code",
+                            "name": "src",
+                            "url": "some_url.git",
+                            "framework_config": {
+                                "framework_type": "langgraph",
+                                "graph": "mock_graph",
+                                "mock_agent": "tests.mock:mock_agent"
+                            }
                         }
-                    },
-                    "required": [
-                        "interrupt_message"
-                    ]
+                    ],
+                    "env_vars": []
                 },
-                "resume_payload": {
-                    "type": "object",
-                    "title": "Mock interrupt answer",
-                    "description": "Answer to the mock interrupt",
-                    "properties": {
-                        "message": {
-                            "title": "Answer",
-                            "description": "Natural language answer to the question asked by this agent",
-                            "type": "string"
+                "acp": {
+                    "capabilities": {
+                        "threads": false,
+                        "interrupts": true,
+                        "callbacks": true
+                    },
+                    "input": {
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                                "type": "string"
+                            }
                         }
                     },
-                    "required": [
-                        "message"
+                    "output": {
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "config": {
+                        "type": "object",
+                        "description": "The configuration of the agent",
+                        "properties": {
+                            "test": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "interrupts": [
+                        {
+                            "interrupt_type": "mock_interrupt",
+                            "interrupt_payload": {
+                                "type": "object",
+                                "title": "Mock interrupt",
+                                "description": "A Mock interrupt",
+                                "properties": {
+                                    "interrupt_message": {
+                                        "title": "Question",
+                                        "description": "Natural language question that is going to be asked by this agent",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "interrupt_message"
+                                ]
+                            },
+                            "resume_payload": {
+                                "type": "object",
+                                "title": "Mock interrupt answer",
+                                "description": "Answer to the mock interrupt",
+                                "properties": {
+                                    "message": {
+                                        "title": "Answer",
+                                        "description": "Natural language answer to the question asked by this agent",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "message"
+                                ]
+                            }
+                        }
                     ]
                 }
-            }
-        ]
-    },
-    "dependencies": [],
-    "deployment": {
-        "dependencies": [],
-        "deployment_options": [
-            {
-                "type": "source_code",
-                "name": "src",
-                "url": "some_url.git",
-                "framework_config": {
-                    "framework_type": "langgraph",
-                    "graph": "mock_graph",
-                    "mock_agent": "tests.mock:mock_agent"
-                }
-            }
-        ]
-    }
+            },
+            "version": "v0.0.1"
+        }
+    ],
+    "locators": [
+        {
+            "url": "some_url.git",
+            "type": "source-code"
+        }
+    ],
+    "name": "org.agntcy.mock_agent",
+    "skills": [],
+    "version": "0.0.1",
+    "schema_version": "0.0.1",
+    "description": "A Mock Agent",
+    "created_at": "2024-10-01T00:00:00Z"
 }

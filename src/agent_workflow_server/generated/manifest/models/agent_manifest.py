@@ -23,11 +23,11 @@ import json
 
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
-from agent_workflow_server.generated.manifest.models.agent_acp_specs import AgentACPSpecs
-from agent_workflow_server.generated.manifest.models.agent_deployment import AgentDeployment
-from agent_workflow_server.generated.manifest.models.agent_metadata import AgentMetadata
+from agent_workflow_server.generated.manifest.models.locator import Locator
+from agent_workflow_server.generated.manifest.models.manifest import Manifest
+from agent_workflow_server.generated.manifest.models.skill import Skill
 try:
     from typing import Self
 except ImportError:
@@ -35,12 +35,19 @@ except ImportError:
 
 class AgentManifest(BaseModel):
     """
-    Describe all the ACP specs of an agent, including schemas and protocol features.
+    AgentManifest
     """ # noqa: E501
-    metadata: AgentMetadata
-    specs: AgentACPSpecs
-    deployment: Optional[AgentDeployment] = None
-    __properties: ClassVar[List[str]] = ["metadata", "specs", "deployment"]
+    annotations: Optional[Dict[str, StrictStr]] = None
+    authors: List[StrictStr]
+    created_at: StrictStr
+    description: StrictStr
+    extensions: List[Manifest]
+    locators: List[Locator]
+    name: StrictStr
+    schema_version: StrictStr
+    skills: List[Skill]
+    version: StrictStr
+    __properties: ClassVar[List[str]] = ["annotations", "authors", "created_at", "description", "extensions", "locators", "name", "schema_version", "skills", "version"]
 
     model_config = {
         "populate_by_name": True,
@@ -79,15 +86,27 @@ class AgentManifest(BaseModel):
             },
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of metadata
-        if self.metadata:
-            _dict['metadata'] = self.metadata.to_dict()
-        # override the default output from pydantic by calling `to_dict()` of specs
-        if self.specs:
-            _dict['specs'] = self.specs.to_dict()
-        # override the default output from pydantic by calling `to_dict()` of deployment
-        if self.deployment:
-            _dict['deployment'] = self.deployment.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of each item in extensions (list)
+        _items = []
+        if self.extensions:
+            for _item in self.extensions:
+                if _item:
+                    _items.append(_item.to_dict())
+            _dict['extensions'] = _items
+        # override the default output from pydantic by calling `to_dict()` of each item in locators (list)
+        _items = []
+        if self.locators:
+            for _item in self.locators:
+                if _item:
+                    _items.append(_item.to_dict())
+            _dict['locators'] = _items
+        # override the default output from pydantic by calling `to_dict()` of each item in skills (list)
+        _items = []
+        if self.skills:
+            for _item in self.skills:
+                if _item:
+                    _items.append(_item.to_dict())
+            _dict['skills'] = _items
         return _dict
 
     @classmethod
@@ -100,9 +119,16 @@ class AgentManifest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "metadata": AgentMetadata.from_dict(obj.get("metadata")) if obj.get("metadata") is not None else None,
-            "specs": AgentACPSpecs.from_dict(obj.get("specs")) if obj.get("specs") is not None else None,
-            "deployment": AgentDeployment.from_dict(obj.get("deployment")) if obj.get("deployment") is not None else None
+            "annotations": obj.get("annotations"),
+            "authors": obj.get("authors"),
+            "created_at": obj.get("created_at"),
+            "description": obj.get("description"),
+            "extensions": [Manifest.from_dict(_item) for _item in obj.get("extensions")] if obj.get("extensions") is not None else None,
+            "locators": [Locator.from_dict(_item) for _item in obj.get("locators")] if obj.get("locators") is not None else None,
+            "name": obj.get("name"),
+            "schema_version": obj.get("schema_version"),
+            "skills": [Skill.from_dict(_item) for _item in obj.get("skills")] if obj.get("skills") is not None else None,
+            "version": obj.get("version")
         })
         return _obj
 

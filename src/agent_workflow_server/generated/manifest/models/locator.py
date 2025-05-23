@@ -23,21 +23,30 @@ import json
 
 
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
-class EnvVarValues(BaseModel):
+class Locator(BaseModel):
     """
-    Describes the values of the environment variables for a specific agent and it's dependencies
+    Locator
     """ # noqa: E501
-    name: Optional[StrictStr] = Field(default=None, description="name of the agent dependency these environment variables are for")
-    values: Optional[Dict[str, StrictStr]] = None
-    env_deps: Optional[List[EnvVarValues]] = None
-    __properties: ClassVar[List[str]] = ["name", "values", "env_deps"]
+    annotations: Optional[Dict[str, StrictStr]] = None
+    digest: Optional[StrictStr] = None
+    size: Optional[StrictInt] = None
+    type: StrictStr
+    url: StrictStr
+    __properties: ClassVar[List[str]] = ["annotations", "digest", "size", "type", "url"]
+
+    @field_validator('type')
+    def type_validate_enum(cls, value):
+        """Validates the enum"""
+        if value not in ('binary', 'unspecified', 'helm-chart', 'docker-image', 'py-package', 'source-code',):
+            raise ValueError("must be one of enum values ('binary', 'unspecified', 'helm-chart', 'docker-image', 'py-package', 'source-code')")
+        return value
 
     model_config = {
         "populate_by_name": True,
@@ -57,7 +66,7 @@ class EnvVarValues(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Self:
-        """Create an instance of EnvVarValues from a JSON string"""
+        """Create an instance of Locator from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -76,18 +85,11 @@ class EnvVarValues(BaseModel):
             },
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in env_deps (list)
-        _items = []
-        if self.env_deps:
-            for _item in self.env_deps:
-                if _item:
-                    _items.append(_item.to_dict())
-            _dict['env_deps'] = _items
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Dict) -> Self:
-        """Create an instance of EnvVarValues from a dict"""
+        """Create an instance of Locator from a dict"""
         if obj is None:
             return None
 
@@ -95,12 +97,12 @@ class EnvVarValues(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "name": obj.get("name"),
-            "values": obj.get("values"),
-            "env_deps": [EnvVarValues.from_dict(_item) for _item in obj.get("env_deps")] if obj.get("env_deps") is not None else None
+            "annotations": obj.get("annotations"),
+            "digest": obj.get("digest"),
+            "size": obj.get("size"),
+            "type": obj.get("type"),
+            "url": obj.get("url")
         })
         return _obj
 
-# TODO: Rewrite to not use raise_errors
-EnvVarValues.model_rebuild(raise_errors=False)
 

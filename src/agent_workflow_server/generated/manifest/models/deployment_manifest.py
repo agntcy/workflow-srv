@@ -23,21 +23,22 @@ import json
 
 
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, ConfigDict
 from typing import Any, ClassVar, Dict, List
-from agent_workflow_server.generated.manifest.models.agent_reference import AgentReference
+from agent_workflow_server.generated.manifest.models.agent_acp_specs import AgentACPSpecs
+from agent_workflow_server.generated.manifest.models.agent_deployment import AgentDeployment
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
-class AgentMetadata(BaseModel):
+class DeploymentManifest(BaseModel):
     """
-    Basic information associated to the agent
+    Describe all the ACP specs of an agent, including schemas and protocol features.
     """ # noqa: E501
-    ref: AgentReference
-    description: StrictStr = Field(description="Description of this agent, which should include what the intended use is, what tasks it accomplishes and how uses input and configs to produce the output and any other side effect")
-    __properties: ClassVar[List[str]] = ["ref", "description"]
+    acp: AgentACPSpecs
+    deployment: AgentDeployment
+    __properties: ClassVar[List[str]] = ["acp", "deployment"]
 
     model_config = {
         "populate_by_name": True,
@@ -57,7 +58,7 @@ class AgentMetadata(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Self:
-        """Create an instance of AgentMetadata from a JSON string"""
+        """Create an instance of DeploymentManifest from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -76,14 +77,17 @@ class AgentMetadata(BaseModel):
             },
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of ref
-        if self.ref:
-            _dict['ref'] = self.ref.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of acp
+        if self.acp:
+            _dict['acp'] = self.acp.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of deployment
+        if self.deployment:
+            _dict['deployment'] = self.deployment.to_dict()
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Dict) -> Self:
-        """Create an instance of AgentMetadata from a dict"""
+        """Create an instance of DeploymentManifest from a dict"""
         if obj is None:
             return None
 
@@ -91,8 +95,8 @@ class AgentMetadata(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "ref": AgentReference.from_dict(obj.get("ref")) if obj.get("ref") is not None else None,
-            "description": obj.get("description")
+            "acp": AgentACPSpecs.from_dict(obj.get("acp")) if obj.get("acp") is not None else None,
+            "deployment": AgentDeployment.from_dict(obj.get("deployment")) if obj.get("deployment") is not None else None
         })
         return _obj
 

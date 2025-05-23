@@ -10,11 +10,17 @@ from typing import Any, Dict, Hashable, List, Mapping, NamedTuple, Optional
 
 import agent_workflow_server.agents.adapters
 from agent_workflow_server.agents.oas_generator import generate_agent_oapi
+from agent_workflow_server.generated.manifest.models.agent_deployment import (
+    AgentDeployment,
+)
 from agent_workflow_server.generated.manifest.models.agent_manifest import AgentManifest
 from agent_workflow_server.generated.models.agent import Agent
 from agent_workflow_server.generated.models.agent_acp_descriptor import (
     AgentACPDescriptor,
 )
+from agent_workflow_server.generated.models.agent_acp_spec import AgentACPSpec
+from agent_workflow_server.generated.models.agent_metadata import AgentMetadata
+from agent_workflow_server.generated.models.agent_ref import AgentRef
 from agent_workflow_server.generated.models.agent_search_request import (
     AgentSearchRequest,
 )
@@ -25,11 +31,30 @@ from .base import BaseAdapter, BaseAgent
 logger = logging.getLogger(__name__)
 
 
+def _make_acp_descriptor(manifest: AgentManifest) -> AgentACPDescriptor:
+    """Create an AgentACPDescriptor from a AgentManifest"""
+    if not manifest.extensions or len(manifest.extensions) == 0:
+        raise ValueError(
+            "Manifest does not contain any extensions. Cannot create ACP descriptor."
+        )
+    return AgentACPDescriptor(
+        metadata=AgentMetadata(
+            ref=AgentRef(
+                name=manifest.name,
+                version=manifest.version,
+                url=manifest.locators[0].url,
+            ),
+            description=manifest.description,
+        ),
+        specs=AgentACPSpec.model_validate(manifest.extensions[0].data.acp.model_dump()),
+    )
+
+
 class AgentInfo(NamedTuple):
     agent: BaseAgent
     acp_descriptor: AgentACPDescriptor
     schema: Mapping[Hashable, Any]
-    manifest: dict  # TODO: proper type from specs
+    deployment: AgentDeployment
 
 
 def _load_adapters() -> List[BaseAdapter]:
@@ -62,17 +87,12 @@ ADAPTERS = _load_adapters()
 def _read_manifest(path: str):
     if os.path.isfile(path):
         with open(path, "r") as file:
-            try:
-                manifest_data = json.load(file)
-            except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"Invalid JSON format in manifest file: {path}. Error: {e}"
-                )
+            manifest_data = json.load(file)
+            manifest = AgentManifest.model_validate(manifest_data)
             # print full path
             logger.info(f"Loaded Agent Manifest from {os.path.abspath(path)}")
-        return AgentACPDescriptor.model_validate(
-            manifest_data
-        ), AgentManifest.model_validate(manifest_data)
+        return _make_acp_descriptor(manifest), manifest.extensions[0].data.deployment
+
     return None, None
 
 
@@ -119,8 +139,8 @@ Check that file path in 'AGENTS_REF' env variable is correct."""
     ] + add_manifest_paths
 
     for manifest_path in manifest_paths:
-        acp_descriptor, manifest = _read_manifest(manifest_path)
-        if acp_descriptor and manifest:
+        acp_descriptor, deployment = _read_manifest(manifest_path)
+        if acp_descriptor and deployment:
             break
     else:
         raise ImportError(
@@ -138,7 +158,7 @@ Check that file path in 'AGENTS_REF' env variable is correct."""
 
         agent = None
         for adapter in ADAPTERS:
-            agent = adapter.load_agent(resolved, manifest, DB.set_persist_threads)
+            agent = adapter.load_agent(resolved, deployment, DB.set_persist_threads)
             if agent is not None:
                 break
         else:
@@ -155,7 +175,7 @@ Check that the module name and export symbol in 'AGENTS_REF' env variable are co
     logger.info(f"Agent Type: {type(agent).__name__}")
 
     return AgentInfo(
-        agent=agent, acp_descriptor=acp_descriptor, manifest=manifest, schema=schema
+        agent=agent, acp_descriptor=acp_descriptor, deployment=deployment, schema=schema
     )
 
 

@@ -14,7 +14,9 @@ from llama_index.core.workflow.handler import WorkflowHandler
 from pydantic import BaseModel
 
 from agent_workflow_server.agents.base import BaseAdapter, BaseAgent
-from agent_workflow_server.generated.manifest.models.agent_manifest import AgentManifest
+from agent_workflow_server.generated.manifest.models.agent_deployment import (
+    AgentDeployment,
+)
 from agent_workflow_server.services.message import Message
 from agent_workflow_server.services.thread_state import ThreadState
 from agent_workflow_server.storage.models import Run
@@ -30,7 +32,7 @@ class LlamaIndexAdapter(BaseAdapter):
     def load_agent(
         self,
         agent: object,
-        manifest: AgentManifest,
+        manifest: AgentDeployment,
         set_thread_persistance_flag: Optional[callable],
     ) -> Optional[BaseAgent]:
         if callable(agent) and len(inspect.signature(agent).parameters) == 0:
@@ -49,19 +51,18 @@ class InterruptInfo:
 
 
 class LlamaIndexAgent(BaseAgent):
-    def __init__(self, agent: Workflow, manifest: AgentManifest):
+    def __init__(self, agent: Workflow, manifest: AgentDeployment):
         self.agent = agent
         self.manifest = manifest
-        self.contexts: Dict[str, Dict] = {}
         self.interrupts_dict: Dict[str, InterruptInfo] = self._load_interrupts_dict(
             manifest
         )
         self.checkpoints: Dict[str, List[LlamaIndexCheckpoint]] = {}
 
     def _load_interrupts_dict(
-        self, manifest: AgentManifest
+        self, manifest: AgentDeployment
     ) -> Dict[str, InterruptInfo]:
-        interrupts_info = manifest.deployment.deployment_options[
+        interrupts_info = manifest.deployment_options[
             0
         ].actual_instance.framework_config.actual_instance.interrupts
         interrupts_dict = {}
@@ -113,7 +114,6 @@ class LlamaIndexAgent(BaseAgent):
             handler.ctx.send_event(event.model_validate(user_data))
 
         async for event in handler.stream_events():
-            self.contexts[run["thread_id"]] = handler.ctx.to_dict()
             if checkpoints is None:
                 checkpoints = []
 
@@ -123,6 +123,7 @@ class LlamaIndexAgent(BaseAgent):
                     context=handler.ctx.to_dict(),
                 )
             )
+            self.checkpoints[run["thread_id"]] = checkpoints
             if self._is_known_interrupt(event):
                 # Send the interrupt
                 await handler.cancel_run()
