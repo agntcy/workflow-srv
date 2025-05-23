@@ -48,6 +48,7 @@ def _make_run(run_create: ApiRunCreateStateful) -> Run:
         "input": run_create.input,
         "config": run_create.config.model_dump() if run_create.config else None,
         "status": "pending",
+        "webhook": run_create.webhook,
     }
 
 
