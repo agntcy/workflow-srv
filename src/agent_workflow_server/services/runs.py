@@ -58,17 +58,6 @@ def _make_run(run_create: ApiRunCreate) -> Run:
 
     curr_time = datetime.now()
 
-    input_data = run_create.input
-    # Convert input to a dict if it's not already
-    if hasattr(input_data, "model_dump"):  # Pydantic v2
-        input_dict = input_data.model_dump()
-    elif hasattr(input_data, "dict"):  # Pydantic v1
-        input_dict = input_data.dict()
-    elif hasattr(input_data, "actual_instance"):  # InputSchema
-        input_dict = input_data.actual_instance
-    else:
-        input_dict = dict(input_data)  # Try direct conversion
-
     if not is_valid_uuid(run_create.agent_id):
         raise ValueError(f'agent_id "{run_create.agent_id}" is not a valid UUID')
     if run_create.webhook and not is_valid_url(run_create.webhook):
@@ -77,7 +66,7 @@ def _make_run(run_create: ApiRunCreate) -> Run:
         "run_id": str(uuid4()),
         "agent_id": run_create.agent_id,
         "thread_id": str(uuid4()),  # TODO
-        "input": input_dict,
+        "input": run_create.input,
         "config": run_create.config.model_dump() if run_create.config else None,
         "metadata": run_create.metadata,
         "webhook": run_create.webhook,

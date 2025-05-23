@@ -19,7 +19,7 @@ class Interrupt(TypedDict):
 class Config(TypedDict):
     tags: Optional[List[str]]
     recursion_limit: Optional[int]
-    configurable: Optional[Dict[str, Any]]
+    configurable: Optional[Any]
 
 
 class Run(TypedDict):
@@ -28,7 +28,7 @@ class Run(TypedDict):
     run_id: str
     agent_id: str
     thread_id: str
-    input: Optional[Dict[str, Any]]
+    input: Optional[Any]
     config: Optional[Config]
     metadata: Optional[Dict[str, Any]]
     webhook: Optional[str]
