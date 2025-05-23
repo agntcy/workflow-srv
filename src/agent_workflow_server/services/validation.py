@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, List
 
 import jsonschema
 
@@ -97,7 +97,7 @@ def validate_run_create(
     return run_create
 
 
-def validate_resume_run(run_id: str, body: Dict[str, Any]):
+def validate_resume_run(run_id: str, body: Any):
     run = DB.get_run(run_id)
     check_run_is_interrupted(run)
 

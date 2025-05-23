@@ -231,7 +231,7 @@ class Runs:
         return [_to_api_model(run) for run in filtered_list]
 
     @staticmethod
-    async def resume(run_id: str, user_input: Dict[str, Any]) -> ApiRun:
+    async def resume(run_id: str, user_input: Any) -> ApiRun:
         run = DB.get_run(run_id)
         check_run_is_interrupted(run)
 

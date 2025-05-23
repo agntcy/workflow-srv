@@ -3,7 +3,7 @@
 
 # coding: utf-8
 
-from typing import Any, AsyncIterator, Dict, List, Optional, Union
+from typing import Any, AsyncIterator, List, Optional, Union
 
 from fastapi import (
     APIRouter,
@@ -104,7 +104,7 @@ async def _validate_run_create(
         )
 
 
-async def _validate_resume_run(run_id: str, body: Dict[str, Any]) -> None:
+async def _validate_resume_run(run_id: str, body: Any) -> None:
     """Validate resume run input against agent's descriptor schema"""
     try:
         validate_resume_run(run_id, body)
@@ -364,7 +364,6 @@ async def search_stateless_runs(
     tags=["Stateless Runs"],
     summary="Resume an interrupted Run",
     response_model_by_alias=True,
-    dependencies=[Depends(_validate_resume_run)],
 )
 async def resume_stateless_run(
     run_id: Annotated[StrictStr, Field(description="The ID of the run.")] = Path(
@@ -374,7 +373,14 @@ async def resume_stateless_run(
 ) -> RunStateless:
     """Provide the needed input to a run to resume its execution. Can only be called for runs that are in the interrupted state Schema of the provided input must match with the schema specified in the agent specs under interrupts for the interrupt type the agent generated for this specific interruption."""
     try:
+        # TODO: This validation should be a dependency
+        validate_resume_run(run_id, body)
         return await Runs.resume(run_id, body)
+    except InvalidFormatException as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
