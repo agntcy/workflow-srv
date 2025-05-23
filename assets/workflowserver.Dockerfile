@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-FROM python:3.12
+FROM python:3.13
 
 ENV POETRY_VERSION=2.1.1
 
