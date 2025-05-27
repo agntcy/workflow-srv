@@ -1,0 +1,129 @@
+{
+  "authors": ["Cisco Systems Inc."],
+  "annotations": {
+    "type": "llama-index"
+  },
+  "created_at": "2025-05-21T00:00:00Z",
+  "name": "org.agntcy.jokereviewer",
+  "description": "create and review Jokes",
+  "version": "0.0.1",
+  "schema_version": "0.3.1",
+  "skills": [],
+  "locators": [],
+  "extensions": [{
+      "name": "oasf.agntcy.org/feature/runtime/manifest",
+      "data": {
+        "acp": {
+          "input": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "string",
+                "description": "The human input"
+              }
+            }
+          },
+          "output": {
+            "type": "object",
+            "oneOf": [{
+                "properties": {
+                  "human_answer": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "human_answer"
+                ]
+              }, {
+                "properties": {
+                  "ai_answer": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ai_answer"
+                ]
+              }
+            ]
+          },
+          "config": {
+            "type": "object",
+            "properties": {}
+          },
+          "capabilities": {
+            "threads": false,
+            "interrupts": true,
+            "callbacks": false
+          },
+          "interrupts": [{
+              "interrupt_type": "first_interrupt",
+              "interrupt_payload": {
+                "type": "object",
+                "title": "First interrupt",
+                "description": "First interrupt the agent is asking",
+                "properties": {
+                  "joke": {
+                    "title": "Joke",
+                    "description": "The joke to be reviewed",
+                    "type": "string"
+                  },
+                  "first_question": {
+                    "title": "First question",
+                    "description": "Natural language question that is going to be asked by this agent",
+                    "type": "string"
+                  },
+                  "needs_answer": {
+                    "title": "Whether the agent needs an answer for this question",
+                    "description": "True if the agent needs a non-empty answer for this question, False otherwise",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "joke",
+                  "first_question",
+                  "needs_answer"
+                ]
+              },
+              "resume_payload": {
+                "type": "object",
+                "title": "First interrupt answer",
+                "description": "Answer to the first interrupt the agent asked",
+                "properties": {
+                  "answer": {
+                    "title": "Answer",
+                    "description": "Text of the answer",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "answer"
+                ]
+              }
+            }
+          ]
+        },
+        "dependencies": [],
+        "deployment": {
+          "dependencies": [],
+          "deployment_options": [{
+              "type": "source_code",
+              "name": "source_code_local",
+              "url": "file://.",
+              "framework_config": {
+                "framework_type": "llamaindex",
+                "path": "JokeReviewer",
+                "interrupts": {
+                  "first_interrupt": {
+                    "interrupt_ref": "tests.agents.jokereviewer:FirstInterruptEvent",
+                    "resume_ref": "tests.agents.jokereviewer:InterruptResponseEvent"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "version": "v0.2.2"
+    }
+  ]
+}
