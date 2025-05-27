@@ -282,8 +282,6 @@ async def test_llamaindex_astream_with_interrupt():
     print("First run with interrupt")
     events = []
     async for result in agent.astream(new_run):
-        # print("...result(1)")
-        # print(json.dumps(result.data, indent=2))
         events.append(result.data)
         if (key in result.data for key in ["joke", "first_question", "needs_answer"]):
             # this is the FirstInterruptEvent, in dict form
@@ -312,8 +310,6 @@ async def test_llamaindex_astream_with_interrupt():
     print("Second run")
     events = []
     async for result in agent.astream(new_run):
-        # print("...result(2)")
-        # print(json.dumps(result.data, indent=2))
         events.append(result.data)
 
     assert len(events) == len(expected_run_2), (

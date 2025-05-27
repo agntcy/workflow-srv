@@ -38,9 +38,6 @@ class JokeReviewer(Workflow):
     @step
     async def generate_joke(self, ev: StartEvent) -> JokeEvent:
         topic = ev.topic
-
-        # prompt = f"Write your best joke about {topic}."
-        # response = await self.llm.acomplete(prompt)
         response = "this is a joke about " + topic
         await asyncio.sleep(1)
         return JokeEvent(joke=str(response))
@@ -73,8 +70,6 @@ class JokeReviewer(Workflow):
     async def critique_joke(self, ev: SecondEvent) -> StopEvent:
         joke = ev.joke
 
-        # prompt = f"Give a thorough analysis and critique of the following joke: {joke}"
-        # response = await self.llm.acomplete(prompt)
         await asyncio.sleep(1)
         response = "this is a review for the joke: " + joke + "\n" + ev.ai_answer
         result = {
@@ -98,10 +93,6 @@ async def main():
     print("Reading events from the workflow...")
     async for ev in handler.stream_events():
         if isinstance(ev, FirstInterruptEvent):
-            print("Received FirstInterruptEvent")
-            print("...joke: ", ev.joke)
-            print("...first_question: ", ev.first_question)
-            print("...needs_answer: ", ev.needs_answer)
             # capture keyboard input
             response = input(ev.first_question)
             print("Sending response event...")

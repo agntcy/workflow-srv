@@ -17,14 +17,10 @@ class JokeEvent(Event):
 
 
 class JokeFlow(Workflow):
-    # llm = OpenAI()
-
     @step
     async def generate_joke(self, ev: StartEvent) -> JokeEvent:
         topic = ev.topic
 
-        # prompt = f"Write your best joke about {topic}."
-        # response = await self.llm.acomplete(prompt)
         response = "this is a joke about " + topic
         asyncio.sleep(1)
         return JokeEvent(joke=str(response))
@@ -33,8 +29,6 @@ class JokeFlow(Workflow):
     async def critique_joke(self, ev: JokeEvent) -> StopEvent:
         joke = ev.joke
 
-        # prompt = f"Give a thorough analysis and critique of the following joke: {joke}"
-        # response = await self.llm.acomplete(prompt)
         response = "this is a critique of the joke: " + joke
         return StopEvent(result=str(response))
 
