@@ -183,17 +183,7 @@ def final_output(
 
 def generate_email(
     state: AgentState | StatelessAgentState,
-) -> (
-    OutputState | AgentState | StatelessOutputState | StatelessAgentState
-):  # Append messages from state to initial prompt
-    messages = [
-        Message(
-            type=MsgType.human,
-            content=MARKETING_EMAIL_PROMPT_TEMPLATE.format(separator=SEPARATOR),
-        )
-    ] + state.messages
-
-    # Call the LLM
+) -> OutputState | AgentState | StatelessOutputState | StatelessAgentState:
     ai_message = Message(
         type=MsgType.ai, content="this is a placeholder for the AI response"
     )
