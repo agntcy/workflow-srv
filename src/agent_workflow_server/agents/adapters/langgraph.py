@@ -66,13 +66,15 @@ class LangGraphAgent(BaseAgent):
         if "interrupt" in run and "user_data" in run["interrupt"]:
             input = Command(resume=run["interrupt"]["user_data"])
 
+        runconfig = RunnableConfig(configurable=configurable)
+        if "tags" in config:
+            runconfig["tags"] = config["tags"]
+        if "recursion_limit" in config:
+            runconfig.recursion_limit = config["recursion_limit"]
+
         async for event in self.agent.astream(
             input=input,
-            config=RunnableConfig(
-                configurable=configurable,
-                tags=config["tags"],
-                recursion_limit=config["recursion_limit"],
-            ),
+            config=runconfig,
         ):
             for k, v in event.items():
                 if k == INTERRUPT:
