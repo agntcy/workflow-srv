@@ -54,7 +54,7 @@ generate-api: clean update-spec
 	mv $(OUTPUT_DIR_TMP)/$(OUTPUT_DIR)/models $(OUTPUT_DIR)
 	mv $(OUTPUT_DIR_TMP)/$(OUTPUT_DIR)/apis $(OUTPUT_DIR)
 	rm -rf $(OUTPUT_DIR_TMP)
-	
+
 # Generate manifest
 generate-manifest: clean-manifest
 	docker run --rm \
