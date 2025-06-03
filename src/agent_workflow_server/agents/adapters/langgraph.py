@@ -70,7 +70,7 @@ class LangGraphAgent(BaseAgent):
         if "tags" in config:
             runconfig["tags"] = config["tags"]
         if "recursion_limit" in config:
-            runconfig.recursion_limit = config["recursion_limit"]
+            runconfig["recursion_limit"] = config["recursion_limit"]
 
         async for event in self.agent.astream(
             input=input,
