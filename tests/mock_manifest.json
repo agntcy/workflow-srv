@@ -4,7 +4,7 @@
     ],
     "extensions": [
         {
-            "name": "oasf.agntcy.org/feature/runtime/manifest",
+            "name": "schema.oasf.agntcy.org/features/runtime/manifest",
             "data": {
                 "deployment": {
                     "agent_deps": [],
