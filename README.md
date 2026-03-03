@@ -1,3 +1,8 @@
+> [!CAUTION]
+> **This repository is no longer maintained.**  It is archived for informational purposes.
+
+---
+
 # Agent Workflow Server
 
 [![Release](https://img.shields.io/github/v/tag/agntcy/workflow-srv?label=latest)](https://github.com/agntcy/workflow-srv/pkgs/container/acp%2Fwfsrv)
